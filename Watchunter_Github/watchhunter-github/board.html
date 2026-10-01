@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Watch board</title>
+<title>WatchHunt</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -64,6 +64,7 @@ main{max-width:1240px;margin:0 auto;padding:0 20px 60px}
 .gauge .band{position:absolute;top:10px;height:14px;background:var(--brass-soft);border:1px solid var(--brass);border-radius:3px}
 .gauge .band.ai{border-style:dashed}
 .gauge .band.market{border-style:dotted}
+.risk{color:var(--oxblood)}
 .gauge .mid{position:absolute;top:8px;width:1px;height:18px;background:var(--brass)}
 .gauge .needle{position:absolute;top:2px;width:2px;height:30px;border-radius:1px;transform:translateX(-1px)}
 .gauge .needle::after{content:"";position:absolute;left:-3px;bottom:-2px;width:8px;height:8px;border-radius:50%;background:inherit}
@@ -94,7 +95,7 @@ main{max-width:1240px;margin:0 auto;padding:0 20px 60px}
 </head>
 <body>
 <header>
-  <h1>Watch board</h1>
+  <h1>WatchHunt</h1>
   <div class="status" id="status" aria-live="polite">Loading…</div>
 </header>
 <div class="err" id="err" hidden></div>
@@ -171,6 +172,17 @@ function marketHtml(r){
   return `<div><b>Google Lens asking prices</b><div>${m.count} secondhand ${m.match_level === "reference" ? "exact-reference" : "brand + model"} matches, median ${money(m.median)}, ${money(m.low)} to ${money(m.high)}.</div>
     <ul>${(m.examples || []).map(x => `<li><a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.title)}</a> ${esc(x.source)} ${money(x.price)}</li>`).join("")}</ul></div>`;
 }
+function riskHtml(r){
+  const e = r.econ, v = e.value;
+  if (!e.fake_risk) return "";
+  const rep = r.replicas || {};
+  return `<div><b>Counterfeit risk</b><div>${e.genuine_chance != null
+      ? `Valued at a ${Math.round(e.genuine_chance * 100)}% chance it is genuine${v && v.genuine_low != null ? ` (${money(v.genuine_low)} to ${money(v.genuine_high)} if genuine)` : ""}.`
+      : "Not checked yet."} Cost includes ${money(e.auth_cost)} to authenticate before you resell.
+    ${rep.count ? ` Google Lens: ${rep.count} replica or clone listings among the matches (${Math.round(rep.share * 100)}%).` : ""}</div>
+    ${r.checks && r.checks.length ? `<ul>${r.checks.map(c => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}
+    ${r.questions && r.questions.length ? `<div>Ask the seller:</div><ul>${r.questions.map(q => `<li>${esc(q)}</li>`).join("")}</ul>` : ""}</div>`;
+}
 function row(r){
   const e = r.econ, v = e.value, h = hoursLeft(r), [cc, cl] = CONCERN[r.concern] || ["var(--muted)","Not AI checked"];
   const flashed = prevPrice[r.key] != null && prevPrice[r.key] !== r.price ? " flash" : "";
@@ -183,7 +195,7 @@ function row(r){
       <div class="sub"><span class="concern" style="background:${cc}" title="${cl}"></span>${esc(r.source)}${r.reference ? " " + esc(r.reference) : ""}${r.era ? ", " + esc(r.era) : ""}</div></div></div>
     <div class="c-price num"><div class="fig${flashed}">${money(r.price)}</div><div class="small">${r.bids != null ? r.bids + " bids" : "buy now"}</div></div>
     <div class="c-ends num"><div class="fig" data-left="${esc(r.key)}">${r.status === "ended" ? "Ended" : fmtLeft(h)}</div></div>
-    <div class="c-value num"><div class="fig">${v ? money(v.mid) : "–"}</div><div class="small">${v ? BASIS[v.basis] || v.basis : ""}</div></div>
+    <div class="c-value num"><div class="fig">${v ? money(v.mid) : "–"}</div><div class="small">${v ? BASIS[v.basis] || v.basis : ""}</div>${e.fake_risk && e.genuine_chance != null ? `<div class="small risk">${Math.round(e.genuine_chance * 100)}% genuine</div>` : ""}</div>
     <div class="c-gauge">${gauge(r)}</div>
     <div class="c-net num"><div class="small ml">Net at mid</div><div class="fig ${netCls}">${money(e.net_mid)}</div><div class="small">${e.margin_pct != null ? e.margin_pct + "%" : ""}</div></div>
     <div class="c-max num"><div class="small ml">Max bid</div><div class="fig ${under ? "pos" : ""}">${e.max_bid === 0 ? "Pass" : money(e.max_bid)}</div><div class="small">${e.max_bid === 0 ? "too thin" : under ? "price is under" : e.max_bid != null ? "price is over" : ""}</div></div>
@@ -192,8 +204,9 @@ function row(r){
   <div class="detail">
     <div><b>${esc(r.title)}</b><div>${esc(r.summary)}</div></div>
     <div><b>${cl}</b>${r.flags && r.flags.length ? `<ul>${r.flags.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}</div>
-    <div><b>How the numbers work</b><div>All-in cost ${money(e.all_in)} includes ${money(e.service)} service and ${money(e.ship_in)} inbound shipping${e.ship_in_basis === "listing" ? " (from the listing)" : " (estimate)"}.
+    <div><b>How the numbers work</b><div>All-in cost ${money(e.all_in)} includes ${money(e.service)} service,${e.auth_cost ? ` ${money(e.auth_cost)} authentication,` : ""} ${money(e.ship_in)} inbound shipping${e.ship_in_basis === "listing" ? " (from the listing)" : " (estimate)"}.
       ${v ? `Value ${money(v.low)} to ${money(v.high)} from ${esc(v.basis_note)}. Max bid uses the low end.` : "Needs sold data or an AI estimate."}</div></div>
+    ${riskHtml(r)}
     ${marketHtml(r)}
     <div class="actions"><a class="btn" href="${esc(r.url)}" target="_blank" rel="noopener">Open listing</a>
       <button class="btn" data-dismiss="${esc(r.key)}">${LOCAL ? "Remove from board" : "Hide on this device"}</button></div>

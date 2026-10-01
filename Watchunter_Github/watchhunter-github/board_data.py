@@ -59,9 +59,13 @@ def build_board(store, cfg):
             "concern": ai.get("authenticity_concern") if ai else None,
             "flags": ai.get("visible_red_flags", []) if ai else [],
             "summary": ai.get("summary", "") if ai else "; ".join(lst.reasons),
-            "econ": numbers(lst, econ),
+            "econ": numbers(lst, econ, cfg["brands"]),
             "market": lst.market,
             "lens_guess": (lst.lens or {}).get("best_guess"),
+            "replicas": {"count": (lst.lens or {}).get("replica_count", 0), "share": (lst.lens or {}).get("replica_share", 0),
+                         "examples": (lst.lens or {}).get("replica_examples", [])},
+            "checks": ai.get("authenticity_checks", []) if ai else [],
+            "questions": ai.get("questions_for_seller", []) if ai else [],
             "history": store.history(lst.key),
         })
     return {

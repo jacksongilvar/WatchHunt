@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-from models import Listing
+from models import Listing, query_items
 
 SEARCH_URL = "https://buyerapi.shopgoodwill.com/api/Search/ItemListing"
 DETAIL_URL = "https://buyerapi.shopgoodwill.com/api/itemDetail/GetItemDetailModelByItemId/{}"
@@ -101,9 +101,9 @@ class ShopGoodwillSource:
     def fetch(self):
         lo, hi = self.search_cfg["min_price"], self.search_cfg["max_price"]
         seen = set()
-        for q in self.cfg["queries"]:
+        for q, q_hi in query_items(self.cfg["queries"], hi):
             try:
-                j = self._post(_body(q, page_size=self.cfg.get("page_size", 40), lo=lo, hi=hi))
+                j = self._post(_body(q, page_size=self.cfg.get("page_size", 40), lo=lo, hi=q_hi))
             except (requests.RequestException, ValueError) as e:
                 print(f"  [shopgoodwill] query '{q}' failed: {e}")
                 continue

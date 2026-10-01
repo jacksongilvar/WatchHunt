@@ -20,6 +20,23 @@ JUNK = ["strap only", "band only", "watch band", "watch strap", "bracelet only",
         "case only", "homage", "replica", "inspired", "style watch", " mod ", "modded", "custom", "poster"]
 
 
+# Replicas copy the real watch, so a genuine watch's photo can match replica listings too. One match means little;
+# a large share of replica matches (or the listing reusing a replica seller's photo) is the real warning sign.
+REPLICA_SOURCES = ["dhgate", "aliexpress", "alibaba", "temu", "wish.com", "made-in-china", "1688.com", "joom",
+                   "banggood", "shein", "replica", "clone", "noob", "repwatch", "superclone"]
+REPLICA_TERMS = ["replica", "super clone", "superclone", "clone", "1:1", "aaa", "noob factory", "vsf", "clean factory",
+                 "ar factory", "ew factory", "zf factory", "mirror quality", "rep watch", "high quality copy", "copy watch"]
+
+
+def replica_matches(matches):
+    out = []
+    for m in matches:
+        t, blob = m["title"].lower(), (m["source"] + " " + m["link"]).lower()
+        if any(r in blob for r in REPLICA_SOURCES) or any(r in t for r in REPLICA_TERMS):
+            out.append(m)
+    return out
+
+
 def _price(m):
     p = m.get("price") or {}
     v = p.get("extracted_value") or p.get("value")
@@ -57,8 +74,12 @@ class Lens:
                     "price": _price(m)}
                    for m in (j.get("visual_matches") or [])[: self.cfg.get("max_matches", 40)]]
         kg = j.get("knowledge_graph") or []
+        reps = replica_matches(matches)
         return {"image": image_url, "matches": matches,
-                "best_guess": (kg[0].get("title") if kg and isinstance(kg[0], dict) else None)}
+                "best_guess": (kg[0].get("title") if kg and isinstance(kg[0], dict) else None),
+                "replica_count": len(reps),
+                "replica_share": round(len(reps) / len(matches), 2) if matches else 0,
+                "replica_examples": [{"title": m["title"], "source": m["source"], "link": m["link"]} for m in reps[:4]]}
 
 
 def hint_text(lens, n=12):
@@ -68,6 +89,10 @@ def hint_text(lens, n=12):
     lines = [f"- {m['title']} ({m['source']})" + (f" ${m['price']:,.0f}" if m["price"] else "")
              for m in lens["matches"][:n] if m["title"]]
     head = f"Google Lens best guess: {lens['best_guess']}\n" if lens.get("best_guess") else ""
+    if lens.get("replica_count"):
+        head += (f"Note: {lens['replica_count']} of {len(lens['matches'])} Lens matches are replica or clone listings "
+                 f"(e.g. {lens['replica_examples'][0]['source']}). Replicas copy genuine models, so this alone proves "
+                 f"nothing, but a high share, or replica photos identical to the listing's photo, is a real warning sign.\n")
     return head + "Google Lens visual matches (other listings that look like this watch, may be wrong):\n" + "\n".join(lines)
 
 

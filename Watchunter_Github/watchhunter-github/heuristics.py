@@ -81,6 +81,12 @@ def score_listing(listing: Listing, cfg: dict) -> Listing:
 
     brand, how = detect_brand(text, cfg["brands"])
     listing.brand_hint = brand
+    b = cfg["brands"].get(brand, {}) if brand else {}
+    if b.get("fake_risk"):
+        words = cfg.get("scoring", {}).get("watch_words", []) + (b.get("also") or [])
+        if not any(_contains(text, w) for w in words):
+            listing.score, listing.reasons = -99, [f"{brand} but not a watch"]
+            return listing
     if brand:
         tier = cfg["brands"][brand].get("tier", 1)
         score += tier

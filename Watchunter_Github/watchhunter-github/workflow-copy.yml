@@ -1,4 +1,4 @@
-name: watchhunter
+name: WatchHunt
 
 on:
   schedule:

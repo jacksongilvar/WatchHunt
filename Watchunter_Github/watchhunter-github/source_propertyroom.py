@@ -29,7 +29,8 @@ PREFIX = re.compile(r"^(?:free shipping\s+)?(?:quick view\s+)?", re.I)
 class PropertyRoomSource:
     name = "propertyroom"
 
-    def __init__(self, cfg, search_cfg):
+    def __init__(self, cfg, search_cfg, max_price=None):
+        self.max_price = max_price
         self.cfg, self.search_cfg = cfg, search_cfg
         self.session = requests.Session()
         self.session.headers["User-Agent"] = UA
@@ -52,7 +53,7 @@ class PropertyRoomSource:
         return r.text
 
     def fetch(self):
-        lo, hi = self.search_cfg["min_price"], self.search_cfg["max_price"]
+        lo, hi = self.search_cfg["min_price"], self.max_price or self.search_cfg["max_price"]
         found = {}
         for path in self.cfg["category_paths"]:
             for page in range(1, self.cfg.get("pages_per_category", 3) + 1):

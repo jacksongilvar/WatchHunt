@@ -1,4 +1,4 @@
-# Watch Hunter config. Edit freely. Restart not needed; it is read on every run.
+# WatchHunt config. Edit freely. Restart not needed; it is read on every run.
 
 search:
   min_price: 10
@@ -8,12 +8,17 @@ search:
 scoring:
   min_score_for_digest: 4    # heuristic score needed to appear in the digest
   min_score_for_ai: 5        # heuristic score needed to spend an AI call
+  # Brand searches (rolex, cartier, tudor) also return perfume, clocks, flatware and DVDs. For fake-risk brands the
+  # title must contain one of these words or one of the brand's model names (brands.<name>.also), or it is dropped.
+  watch_words: [watch, watches, wristwatch, wrist watch, timepiece, chronograph, chronometer, automatic, self winding,
+                manual wind, quartz, rubies, jewels, movement, dial, bezel, caseback, oyster]
 
 ai:
   enabled: true
   model: claude-sonnet-5-5   # any Claude model with vision
   max_listings_per_run: 25   # hard cap on AI calls per run (cost control)
   max_images_per_listing: 4
+  max_images_high_risk: 8    # Rolex, Cartier, Tudor: more photos (caseback, clasp, rehaut) to check for fakes
 
 # Google Lens via SerpApi (serpapi.com). Runs on each AI-checked listing's main photo, before Claude.
 # Lens match titles help Claude identify the watch; priced matches become the "market" value band.
@@ -55,6 +60,14 @@ ebay:
     - gold watch unknown
     - automatic watch needs service
     # misspellings
+    # Rolex, Cartier, Tudor: higher price ceiling. Fakes are common here; see economics.fake_risk.
+    - {q: rolex watch, max_price: 1500}
+    - {q: rolex vintage, max_price: 1500}
+    - {q: cartier watch, max_price: 1500}
+    - {q: cartier tank, max_price: 1500}
+    - {q: cartier santos, max_price: 1500}
+    - {q: tudor watch, max_price: 1500}
+    - {q: tudor vintage, max_price: 1500}
     - rolx
     - rollex watch
     - omeaga watch
@@ -77,6 +90,9 @@ shopgoodwill:
   queries:
     - watch
     - wristwatch
+    - {q: rolex, max_price: 1500}
+    - {q: cartier, max_price: 1500}
+    - {q: tudor, max_price: 1500}
     - watch lot
     - vintage watch
     - mens watch
@@ -115,6 +131,28 @@ exclude_terms:
   - fossil
   - guess
   - armitron
+  # Not watches (brand searches pull these in)
+  - clock
+  - dealer display
+  - pouch
+  - spoon
+  - spoons
+  - wallet
+  - keychain
+  - key chain
+  - perfume
+  - parfum
+  - eau de
+  - fragrance
+  - flatware
+  - silverplate
+  - stationery
+  - figurine
+  - dvd
+  - playset
+  - cufflinks
+  - sunglasses
+  - bottle stopper
 
 # Phrases that suggest the seller does not know what they have.
 vague_terms:
@@ -140,8 +178,9 @@ vague_terms:
 # tier: 3 = high value, 2 = mid, 1 = entry.
 # also = legit alternate names or model names. misspellings = typos worth hunting.
 brands:
-  rolex:            {tier: 3, also: [oyster perpetual, datejust, submariner], misspellings: [rollex, rolx, rolax, roelx, rollx]}
-  cartier:          {tier: 3, also: [tank watch, santos], misspellings: [cartie, catier, cartiere]}
+  # max_price raises the $ ceiling for this brand. fake_risk turns on the counterfeit adjustment in economics.
+  rolex:            {tier: 3, max_price: 1500, fake_risk: true, also: [oyster perpetual, datejust, submariner, oysterdate, air king, air-king, gmt master], misspellings: [rollex, rolx, rolax, roelx, rollx, rolexx, rollax]}
+  cartier:          {tier: 3, max_price: 1500, fake_risk: true, also: [tank louis, tank francaise, tank solo, must de cartier, santos, panthere, ballon bleu, pasha], misspellings: [cartie, catier, cartiere, cartiar, carteir]}
   patek philippe:   {tier: 3, also: [patek], misspellings: [patek phillipe, patek philip, patek phillip]}
   audemars piguet:  {tier: 3, also: [audemars], misspellings: [audemar]}
   vacheron:         {tier: 3, also: [vacheron constantin], misspellings: [vacheron constantine]}
@@ -150,7 +189,7 @@ brands:
   heuer:            {tier: 3, also: [], misspellings: [hueur, huer, hauer]}
   iwc:              {tier: 3, also: [schaffhausen], misspellings: []}
   omega:            {tier: 2, also: [seamaster, speedmaster, constellation, de ville], misspellings: [omeaga, omgea, omege, seamster]}
-  tudor:            {tier: 2, also: [], misspellings: [tudur, tuder]}
+  tudor:            {tier: 2, max_price: 1500, fake_risk: true, also: [tudor prince, oysterdate tudor, black bay, tudor ranger, tudor submariner], misspellings: [tudur, tuder, tudar]}
   breitling:        {tier: 2, also: [navitimer], misspellings: [brietling, brightling, breitlng]}
   longines:         {tier: 2, also: [], misspellings: [longine, longenes, longins]}
   zenith:           {tier: 2, also: [el primero], misspellings: []}
@@ -177,6 +216,16 @@ economics:
   buyer_premium_pct: {ebay: 0, shopgoodwill: 0, propertyroom: 0}   # check each site's current terms
   service_cost: {automatic: 350, manual: 300, quartz: 60, unknown: 250}
   min_comps: 5             # sold results needed before sold data outranks everything else
+  # Counterfeit adjustment for brands with fake_risk: true (Rolex, Cartier, Tudor).
+  # Value becomes: chance genuine x genuine value + (1 - chance) x fake_value.
+  # The chance comes from the AI's red-flag read and Google Lens replica matches. Photos cannot prove genuine,
+  # so even "no visible red flags" is well short of 1. Authentication cost is added to your all-in cost.
+  fake_risk:
+    genuine_chance: {none_visible: 0.6, some: 0.2, cannot_assess: 0.3, high: 0.02}
+    replica_share_threshold: 0.3 # replicas copy real models, so only a large share of replica Lens matches counts
+    replica_match_penalty: 0.5   # multiply the chance by this when that share is reached
+    fake_value: 25               # what a fake sells for (often nothing; selling one knowingly is illegal)
+    authentication_cost: {rolex: 150, cartier: 120, tudor: 120}
   lens:
     min_prices: 4          # priced Lens matches needed before market data outranks the AI guess
     asking_discount: 0.8   # asking prices run above what watches actually sell for; value = asking x this

@@ -1,4 +1,4 @@
-# Watch Hunter v1
+# WatchHunt
 
 ## Running on GitHub (no computer needed)
 
@@ -10,7 +10,7 @@ GitHub runs the tool on a schedule and publishes the board as a web page:
 The workflow lives in `.github/workflows/watchhunter.yml` (a copy is in `workflow-copy.yml` because Finder hides folders starting with a dot).
 Keys go in Settings > Secrets and variables > Actions, never in files. Add `SERPAPI_API_KEY` there for Google Lens.
 Saved state (what has been seen, price history) lives on a branch called `state` that the workflow overwrites each run.
-To run it right away: Actions tab > watchhunter > Run workflow.
+To run it right away: Actions tab > WatchHunt > Run workflow.
 
 Running locally still works exactly as below.
 
@@ -54,6 +54,7 @@ Each row shows:
   3. The AI's guess (dashed band).
   The board labels which one it used. Lens matches also go into the Claude prompt, so identification is better even when there are no prices.
 - **Cost vs value gauge:** the brass band is the value range. The needle is your all-in cost: price plus inbound shipping (the listing's stated shipping on eBay when it has one, otherwise `ship_in`) plus a service estimate. A green needle clears your target margin, brass is profitable but thin, and red loses money at the low estimate.
+- **Rolex, Cartier and Tudor (fake risk):** these are searched up to $1,500 (`brands.<name>.max_price`) and checked first, with up to 8 photos. Claude runs a brand-specific counterfeit checklist (cyclops, rehaut, casebacks, Cartier secret signature and so on). Their value is risk-adjusted: chance genuine x genuine value + chance fake x `fake_value`. The chance comes from Claude's red-flag read (`economics.fake_risk.genuine_chance`) and drops further when a large share of Google Lens matches are replica listings. An authentication fee is added to all-in cost. The board shows the percentage and the checks. Nothing here can prove a watch genuine; authenticate before reselling, and never resell a watch you suspect is fake.
 - **Net at mid:** profit if it sells at the middle of the value range, after selling fees and shipping out.
 - **Max bid:** the highest price that still clears your target margin at the LOW value estimate. "Pass" means no price does.
 

@@ -1,4 +1,4 @@
-"""Watch Hunter v1: eBay + ShopGoodwill + PropertyRoom, text scoring, AI photo triage, daily digest.
+"""WatchHunt: eBay + ShopGoodwill + PropertyRoom, text scoring, AI photo triage, daily digest.
 
 Usage:
   python main.py                         # full run
@@ -17,6 +17,20 @@ from dotenv import load_dotenv
 import digest
 from heuristics import score_listing
 from lens import Lens, hint_text, market
+from models import price_ceiling
+
+
+def is_high_risk(cfg, brand):
+    return bool(brand and cfg["brands"].get(brand, {}).get("fake_risk"))
+
+
+def check_failed(ai):
+    """True when an earlier AI check did not actually look at the watch."""
+    if not ai:
+        return False
+    if ai.get("check_failed"):
+        return True
+    return (ai.get("summary") or "").startswith(("No usable images", "AI call failed", "AI returned unparseable"))
 from store import Store
 
 
@@ -35,7 +49,7 @@ def build_sources(cfg, wanted, debug):
         sources.append(ShopGoodwillSource(cfg["shopgoodwill"], s, debug))
     if "propertyroom" in wanted and cfg["propertyroom"].get("enabled"):
         from source_propertyroom import PropertyRoomSource
-        sources.append(PropertyRoomSource(cfg["propertyroom"], s))
+        sources.append(PropertyRoomSource(cfg["propertyroom"], s, price_ceiling(cfg)))
     return sources
 
 
@@ -66,20 +80,23 @@ def main():
         n_total = n_new = 0
         for lst in src.fetch():
             n_total += 1
-            if not (s["min_price"] <= lst.price <= s["max_price"]):
-                continue
             if not args.include_seen and store.is_seen(lst.key):
                 continue
-            n_new += 1
             score_listing(lst, cfg)
+            # Rolex, Cartier and Tudor get a higher ceiling (brands.<name>.max_price); everything else uses search.max_price.
+            if not (s["min_price"] <= lst.price <= price_ceiling(cfg, lst.brand_hint)):
+                continue
+            n_new += 1
             store.save(lst)  # mark seen even if low score, so it is not re-scored daily
-            if lst.score >= cfg["scoring"]["min_score_for_digest"]:
+            # Rolex, Cartier and Tudor watches are always looked at, whatever their text score.
+            if lst.score >= cfg["scoring"]["min_score_for_digest"] or (lst.score > -99 and is_high_risk(cfg, lst.brand_hint)):
                 candidates.append(lst)
                 by_source[lst.key] = src
         stats[src.name] = f"{n_total} fetched, {n_new} new"
         print(f"  {n_total} fetched, {n_new} new")
     store.commit()
-    candidates.sort(key=lambda l: -l.score)
+    # Fake-risk brands (Rolex, Cartier, Tudor) go first so they get the AI and Lens budget.
+    candidates.sort(key=lambda l: (not is_high_risk(cfg, l.brand_hint), -l.score))
     stats["flagged"] = len(candidates)
 
     # 2. Enrich and AI-check the best candidates
@@ -105,25 +122,43 @@ def main():
 
     budget = cfg["ai"].get("max_listings_per_run", 25)
     sgw = next((x for x in sources if x.name == "shopgoodwill"), None)
+    src_by_name = {x.name: x for x in sources}
+
+    def check(lst, src):
+        nonlocal budget, lens_budget
+        src.enrich(lst)
+        risky = is_high_risk(cfg, lst.brand_hint)
+        hints = ""
+        lst.lens = lst.market = None
+        if lens and lens_budget > 0 and lst.image_urls:
+            lst.lens = lens.search(lst.image_urls[0])
+            lens_budget -= 1
+            hints = hint_text(lst.lens)
+        n_img = cfg["ai"].get("max_images_high_risk", 8) if risky else None
+        lst.ai = vision.analyze(lst, hints, n_img)
+        budget -= 1
+        if lst.lens:
+            lst.market = market(lst.lens, lst.ai, cfg.get("exclude_terms", []),
+                                lens_cfg.get("used_sources", []), lens_cfg.get("min_reference_matches", 3))
+        if cfg["comps"].get("shopgoodwill_sold") and sgw and (lst.ai or {}).get("brand") and not lst.ai.get("is_lot"):
+            q = " ".join(x for x in [lst.ai.get("brand"), lst.ai.get("model")] if x)
+            lst.comps = sgw.sold_comps(q)
+        store.save(lst)
+        store.track(lst)  # AI-checked watches go on the live board
+
+    # Board rows whose check never finished (photos would not download, AI error) get another try first.
+    if vision:
+        for lst, _, _ in store.tracked(("active",)):
+            if budget <= 0 or not check_failed(lst.ai) or lst.source not in src_by_name:
+                continue
+            print(f"  Re-check: {lst.title[:70]}")
+            check(lst, src_by_name[lst.source])
+        store.commit()
+
     for lst in candidates:
-        if vision and budget > 0 and lst.score >= cfg["scoring"]["min_score_for_ai"]:
+        if vision and budget > 0 and (lst.score >= cfg["scoring"]["min_score_for_ai"] or is_high_risk(cfg, lst.brand_hint)):
             print(f"  AI: {lst.title[:70]}")
-            by_source[lst.key].enrich(lst)
-            hints = ""
-            if lens and lens_budget > 0 and lst.image_urls:
-                lst.lens = lens.search(lst.image_urls[0])
-                lens_budget -= 1
-                hints = hint_text(lst.lens)
-            lst.ai = vision.analyze(lst, hints)
-            budget -= 1
-            if lst.lens:
-                lst.market = market(lst.lens, lst.ai, cfg.get("exclude_terms", []),
-                                    lens_cfg.get("used_sources", []), lens_cfg.get("min_reference_matches", 3))
-            if cfg["comps"].get("shopgoodwill_sold") and sgw and (lst.ai or {}).get("brand"):
-                q = " ".join(x for x in [lst.ai.get("brand"), lst.ai.get("model")] if x)
-                lst.comps = sgw.sold_comps(q)
-            store.save(lst)
-            store.track(lst)  # AI-checked watches go on the live board
+            check(lst, by_source[lst.key])
             ai_checked.append(lst)
         else:
             if lst.score >= cfg.get("dashboard", {}).get("track_min_score", 99):
@@ -138,7 +173,7 @@ def main():
     print(f"Digest: {os.path.abspath(path)}")
     worth = sum(1 for l in ai_checked if (l.ai or {}).get("worth_a_closer_look"))
     try:
-        if digest.email(doc, f"Watch Hunter: {worth} worth a look, {len(candidates)} flagged"):
+        if digest.email(doc, f"WatchHunt: {worth} worth a look, {len(candidates)} flagged"):
             print("Emailed digest.")
     except Exception as e:
         print(f"! Email failed: {e}")

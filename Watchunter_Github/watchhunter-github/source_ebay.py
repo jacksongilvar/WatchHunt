@@ -10,7 +10,7 @@ from urllib.parse import quote
 
 import requests
 
-from models import Listing
+from models import Listing, query_items
 
 TOKEN_URL = "https://api.ebay.com/identity/v1/oauth2/token"
 SEARCH_URL = "https://api.ebay.com/buy/browse/v1/item_summary/search"
@@ -62,12 +62,12 @@ class EbaySource:
     def fetch(self):
         lo, hi = self.search_cfg["min_price"], self.search_cfg["max_price"]
         seen = set()
-        for q in self.cfg["queries"]:
+        for q, q_hi in query_items(self.cfg["queries"], hi):
             params = {
                 "q": q,
                 "limit": self.cfg.get("limit_per_query", 100),
                 "sort": "newlyListed",
-                "filter": f"price:[{lo}..{hi}],priceCurrency:USD,buyingOptions:{{AUCTION|FIXED_PRICE}}",
+                "filter": f"price:[{lo}..{q_hi}],priceCurrency:USD,buyingOptions:{{AUCTION|FIXED_PRICE}}",
             }
             if self.cfg.get("category_ids"):
                 params["category_ids"] = ",".join(self.cfg["category_ids"])

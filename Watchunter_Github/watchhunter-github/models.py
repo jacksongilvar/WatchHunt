@@ -2,6 +2,23 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 
+def query_items(queries, default_max):
+    """Queries are plain strings or {q: ..., max_price: ...} for brands worth a higher ceiling."""
+    for q in queries or []:
+        if isinstance(q, dict):
+            yield q["q"], q.get("max_price", default_max)
+        else:
+            yield q, default_max
+
+
+def price_ceiling(cfg, brand=None):
+    """Highest price worth looking at for a brand (brands can raise the global search.max_price)."""
+    default = cfg["search"]["max_price"]
+    if brand is None:
+        return max([default] + [b.get("max_price", 0) for b in cfg["brands"].values()])
+    return cfg["brands"].get(brand, {}).get("max_price", default)
+
+
 @dataclass
 class Listing:
     source: str                     # ebay | shopgoodwill | propertyroom

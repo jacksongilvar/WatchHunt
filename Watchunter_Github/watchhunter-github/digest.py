@@ -38,6 +38,7 @@ def _card(lst):
         ident = " ".join(x for x in [ai.get("brand"), ai.get("model"), ai.get("reference_guess")] if x) or "Unidentified"
         flags = "".join(f"<li>{_e(f)}</li>" for f in ai.get("visible_red_flags", []) or [])
         qs = "".join(f"<li>{_e(x)}</li>" for x in ai.get("questions_for_seller", []) or [])
+        checks = "".join(f"<li>{_e(x)}</li>" for x in ai.get("authenticity_checks", []) or [])
         val = ai.get("rough_value_range_usd")
         val_txt = f"${val[0]:,.0f} to ${val[1]:,.0f} (AI guess, verify with sold comps)" \
             if isinstance(val, list) and len(val) == 2 and all(isinstance(v, (int, float)) for v in val) else "n/a"
@@ -50,7 +51,9 @@ def _card(lst):
         <div>{_e(ai.get('summary', ''))}</div>
         {f'<div><b>Red flags:</b><ul style="margin:2px 0">{flags}</ul></div>' if flags else ''}
         {f'<div><b>Ask the seller:</b><ul style="margin:2px 0">{qs}</ul></div>' if qs else ''}
-        <div><b>Rough value:</b> {val_txt}</div>"""
+        <div><b>Rough value:</b> {val_txt}</div>
+        {f'<div><b>Authentication checks:</b><ul style="margin:2px 0">{checks}</ul></div>' if checks else ''}
+        {f'<div style="color:#c62828"><b>Google Lens:</b> {(lst.lens or {}).get("replica_count")} replica or clone listings among the matches.</div>' if (lst.lens or {}).get("replica_count") else ''}"""
 
     comps_html = ""
     c = lst.comps
@@ -90,7 +93,7 @@ def build(ai_checked, text_only, stats):
     now = datetime.now().strftime("%a %b %d, %I:%M %p")
     stats_line = " | ".join(f"{k}: {v}" for k, v in stats.items())
     return f"""<html><body style="max-width:820px;margin:auto;font:14px -apple-system,Helvetica,Arial">
-    <h2>Watch Hunter digest, {now}</h2>
+    <h2>WatchHunt digest, {now}</h2>
     <p style="color:#555">{_e(stats_line)}</p>
     <p style="background:#fff3e0;padding:8px;border-radius:6px">AI output is triage only.
     Nothing here is authenticated. Check sold comps, fees and service cost before bidding.</p>
