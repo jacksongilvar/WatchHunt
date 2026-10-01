@@ -25,6 +25,9 @@ jobs:
   run:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: Watchunter_Github
     env:
       EBAY_CLIENT_ID: ${{ secrets.EBAY_CLIENT_ID }}
       EBAY_CLIENT_SECRET: ${{ secrets.EBAY_CLIENT_SECRET }}
@@ -49,6 +52,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+          cache-dependency-path: Watchunter_Github/requirements.txt
 
       - run: pip install -r requirements.txt
 
@@ -77,13 +81,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: digests
-          path: digests/
+          path: Watchunter_Github/digests/
           retention-days: 7
           if-no-files-found: ignore
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: Watchunter_Github/site
 
   deploy:
     needs: run
