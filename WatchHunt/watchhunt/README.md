@@ -5,9 +5,9 @@
 GitHub runs the tool on a schedule and publishes the board as a web page:
 - Full scan for new listings every 3 hours.
 - Bid refresh on everything on the board every hour.
-- Board page at https://YOUR-USERNAME.github.io/watchhunter/
+- Board page at https://YOUR-USERNAME.github.io/WatchHunt/
 
-The workflow lives in `.github/workflows/watchhunter.yml` (a copy is in `workflow-copy.yml` because Finder hides folders starting with a dot).
+The workflow lives in `.github/workflows/watchhunt.yml` (a copy is in `workflow-copy.yml` because Finder hides folders starting with a dot).
 Keys go in Settings > Secrets and variables > Actions, never in files. Add `SERPAPI_API_KEY` there for Google Lens.
 Saved state (what has been seen, price history) lives on a branch called `state` that the workflow overwrites each run.
 To run it right away: Actions tab > WatchHunt > Run workflow.
@@ -20,7 +20,7 @@ AI output is triage, not authentication. Nothing in the digest means a watch is 
 
 ## Setup (Mac)
 
-1. `cd watchhunter`
+1. `cd WatchHunt/watchhunt`
 2. `python3 -m venv .venv && source .venv/bin/activate`
 3. `pip install -r requirements.txt`
 4. `cp .env.example .env` and fill it in:
@@ -37,7 +37,7 @@ The digest lands in `digests/`. Open it in a browser.
 
 `crontab -e` and add (runs 8am daily; adjust the path):
 
-    0 8 * * * cd /Users/YOU/watchhunter && .venv/bin/python main.py >> run.log 2>&1
+    0 8 * * * cd /Users/YOU/WatchHunt/watchhunt && .venv/bin/python main.py >> run.log 2>&1
 
 Your Mac has to be awake. For reliability, move it to a small cloud server later.
 

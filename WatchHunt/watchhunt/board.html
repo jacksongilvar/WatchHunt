@@ -11,19 +11,21 @@
   --dial:#17243a; --dial-2:#1f3050; --steel:#dfe4ea; --muted:#8e9bb0; --rule:#2c3d5c;
   --brass:#c2a466; --brass-soft:rgba(194,164,102,.28); --lume:#86cdbd; --oxblood:#c9634b;
   --figures:"Barlow Condensed","Arial Narrow",sans-serif; --text:"Barlow","Helvetica Neue",Arial,sans-serif;
+  --wrap:1240px; --thumb:48px; --fig:20px; --base:15px;
+  --cols:minmax(220px,2.2fr) 90px 92px 118px minmax(180px,1.6fr) 96px 92px 84px;
 }
 @media (prefers-color-scheme: light){
   :root{--dial:#f1f2ee; --dial-2:#e4e7e2; --steel:#17243a; --muted:#5c6a80; --rule:#cfd4cc;
         --brass:#9a7a37; --brass-soft:rgba(154,122,55,.22); --lume:#2f8a76; --oxblood:#b24a33;}
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--dial);color:var(--steel);font:15px/1.45 var(--text)}
+html,body{margin:0;background:var(--dial);color:var(--steel);font:var(--base)/1.45 var(--text)}
 body{background:radial-gradient(120% 80% at 50% -10%, var(--dial-2), var(--dial) 60%) fixed}
-header{max-width:1240px;margin:0 auto;padding:28px 20px 12px;display:flex;flex-wrap:wrap;gap:16px 32px;align-items:end;justify-content:space-between}
+header{max-width:var(--wrap);margin:0 auto;padding:28px 20px 12px;display:flex;flex-wrap:wrap;gap:16px 32px;align-items:end;justify-content:space-between}
 h1{font:600 44px/1 var(--figures);letter-spacing:.01em;margin:0}
 .status{color:var(--muted);font-size:14px}
 .status b{color:var(--steel);font-weight:500}
-.controls{max-width:1240px;margin:0 auto;padding:0 20px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.controls{max-width:var(--wrap);margin:0 auto;padding:0 20px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .seg{display:inline-flex;border:1px solid var(--rule);border-radius:999px;overflow:hidden}
 .seg button,.btn{font:500 14px var(--text);color:var(--muted);background:none;border:0;padding:7px 14px;cursor:pointer}
 .seg button[aria-pressed=true]{background:var(--brass-soft);color:var(--steel)}
@@ -33,10 +35,10 @@ h1{font:600 44px/1 var(--figures);letter-spacing:.01em;margin:0}
 .btn:hover,.seg button:hover{color:var(--steel)}
 button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 .spacer{flex:1}
-.assume{max-width:1240px;margin:0 auto;padding:0 20px 18px;color:var(--muted);font-size:13px}
+.assume{max-width:var(--wrap);margin:0 auto;padding:0 20px 18px;color:var(--muted);font-size:13px}
 
-main{max-width:1240px;margin:0 auto;padding:0 20px 60px}
-.head,.row>summary{display:grid;grid-template-columns:minmax(220px,2.2fr) 90px 92px 118px minmax(180px,1.6fr) 96px 92px 84px;gap:14px;align-items:center}
+main{max-width:var(--wrap);margin:0 auto;padding:0 20px 60px}
+.head,.row>summary{display:grid;grid-template-columns:var(--cols);gap:14px;align-items:center}
 .head{color:var(--muted);font-size:13px;padding:0 12px 8px;border-bottom:1px solid var(--rule)}
 .head .num,.num{text-align:right}
 .row{border-bottom:1px solid var(--rule)}
@@ -45,11 +47,11 @@ main{max-width:1240px;margin:0 auto;padding:0 20px 60px}
 .row[open]>summary,.row>summary:hover{background:rgba(255,255,255,.03)}
 .row.ended{opacity:.55}
 .watch{display:flex;gap:12px;align-items:center;min-width:0}
-.watch img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid var(--rule);flex:none;background:var(--dial-2)}
+.watch img{width:var(--thumb);height:var(--thumb);border-radius:50%;object-fit:cover;border:1px solid var(--rule);flex:none;background:var(--dial-2)}
 .watch .t{min-width:0}
 .watch .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .watch .sub{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fig{font:500 20px/1.1 var(--figures);font-variant-numeric:tabular-nums}
+.fig{font:500 var(--fig)/1.1 var(--figures);font-variant-numeric:tabular-nums}
 .small{font-size:12px;color:var(--muted)}
 .pos{color:var(--lume)} .neg{color:var(--oxblood)}
 .flash{animation:flash 1.6s ease-out}
@@ -71,13 +73,13 @@ main{max-width:1240px;margin:0 auto;padding:0 20px 60px}
 .gauge .none{position:absolute;top:8px;font-size:12px;color:var(--muted)}
 
 .spark{width:84px;height:30px;display:block;margin-left:auto}
-.detail{padding:4px 12px 18px 72px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px 32px;color:var(--muted);font-size:14px}
+.detail{padding:4px 12px 18px calc(var(--thumb) + 24px);display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px 32px;color:var(--muted);font-size:14px}
 .detail b{color:var(--steel);font-weight:500}
 .detail ul{margin:4px 0 0;padding-left:18px}
 .detail .actions{display:flex;gap:8px;align-items:start}
 .empty{padding:48px 12px;color:var(--muted);max-width:60ch}
 .empty code{color:var(--steel)}
-.err{color:var(--oxblood);max-width:1240px;margin:0 auto;padding:0 20px 10px}
+.err{color:var(--oxblood);max-width:var(--wrap);margin:0 auto;padding:0 20px 10px}
 
 @media (max-width:900px){
   .head{display:none}
@@ -89,6 +91,27 @@ main{max-width:1240px;margin:0 auto;padding:0 20px 60px}
   .c-value,.c-spark{display:none}
   .detail{padding-left:12px}
   h1{font-size:36px}
+}
+/* Bigger monitors: use the width. The gauge and the watch name get most of the extra room. */
+@media (min-width:1500px){
+  :root{--wrap:1480px; --thumb:56px; --fig:22px; --base:16px;
+        --cols:minmax(280px,2.4fr) 104px 104px 132px minmax(260px,2fr) 112px 104px 110px}
+  h1{font-size:52px}
+  .spark{width:110px;height:34px}
+  .gauge{height:38px}
+}
+@media (min-width:1900px){
+  :root{--wrap:1840px; --thumb:64px; --fig:24px; --base:17px;
+        --cols:minmax(340px,2.6fr) 116px 116px 148px minmax(360px,2.4fr) 124px 116px 140px}
+  h1{font-size:58px}
+  .spark{width:140px;height:38px}
+  .detail{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+}
+@media (min-width:2500px){
+  :root{--wrap:2360px; --thumb:72px; --fig:26px; --base:18px;
+        --cols:minmax(420px,2.8fr) 130px 130px 164px minmax(480px,2.8fr) 140px 130px 170px}
+  h1{font-size:64px}
+  .spark{width:170px;height:42px}
 }
 @media (prefers-reduced-motion: reduce){.flash{animation:none}}
 </style>
@@ -161,7 +184,7 @@ function spark(hist){
   if (!hist || hist.length < 2) return `<span class="small">–</span>`;
   const ps = hist.map(h => h.price), lo = Math.min(...ps), hi = Math.max(...ps), span = hi - lo || 1;
   const pts = ps.map((p,i) => `${(i/(ps.length-1)*82+1).toFixed(1)},${(28 - (p-lo)/span*26).toFixed(1)}`).join(" ");
-  return `<svg class="spark" viewBox="0 0 84 30" aria-label="Price history"><polyline fill="none" stroke="var(--brass)" stroke-width="1.5" points="${pts}"/></svg>`;
+  return `<svg class="spark" viewBox="0 0 84 30" preserveAspectRatio="none" aria-label="Price history"><polyline fill="none" stroke="var(--brass)" stroke-width="1.5" vector-effect="non-scaling-stroke" points="${pts}"/></svg>`;
 }
 const BASIS = {sold: "sold data", market: "Lens market", ai: "AI guess"};
 function marketHtml(r){

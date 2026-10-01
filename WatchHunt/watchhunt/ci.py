@@ -34,7 +34,7 @@ def main():
         data["mode"] = "static"
         data["state"] = {"last_refresh": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                          "refreshing": False, "last_error": None}
-        data["actions_url"] = f"https://github.com/{repo}/actions/workflows/watchhunter.yml" if repo else None
+        data["actions_url"] = f"https://github.com/{repo}/actions/workflows/watchhunt.yml" if repo else None
         with open(os.path.join(out, "board.json"), "w") as f:
             json.dump(data, f)
         shutil.copy("board.html", os.path.join(out, "index.html"))

@@ -18,7 +18,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: watchhunter
+  group: watchhunt
   cancel-in-progress: false
 
 jobs:
@@ -41,7 +41,7 @@ jobs:
       - name: Restore saved state
         run: |
           if git fetch --depth 1 origin state 2>/dev/null; then
-            git show FETCH_HEAD:watchhunter.db > watchhunter.db && echo "State restored."
+            { git show FETCH_HEAD:watchhunt.db > watchhunt.db 2>/dev/null || git show FETCH_HEAD:watchhunter.db > watchhunt.db; } && echo "State restored."
           else
             echo "No saved state yet (first run)."
           fi
@@ -65,11 +65,11 @@ jobs:
 
       - name: Save state
         run: |
-          mkdir -p /tmp/state && cp watchhunter.db /tmp/state/
+          mkdir -p /tmp/state && cp watchhunt.db /tmp/state/
           cd /tmp/state
           git init -q -b state
-          git add watchhunter.db
-          git -c user.name="watchhunter-bot" -c user.email="watchhunter-bot@users.noreply.github.com" \
+          git add watchhunt.db
+          git -c user.name="watchhunt-bot" -c user.email="watchhunt-bot@users.noreply.github.com" \
               commit -qm "state $(date -u +%Y-%m-%dT%H:%MZ)"
           git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" state
 

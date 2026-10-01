@@ -1,5 +1,5 @@
 .env
-Watchunter_Github/watchhunter-github/.env
+WatchHunt/watchhunt/.env
 *.db
 digests/
 site/

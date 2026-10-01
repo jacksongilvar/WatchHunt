@@ -14,7 +14,7 @@ def _now():
 
 
 class Store:
-    def __init__(self, path="watchhunter.db"):
+    def __init__(self, path="watchhunt.db"):
         self.db = sqlite3.connect(path, check_same_thread=False)
         self.db.executescript("""
         CREATE TABLE IF NOT EXISTS seen (

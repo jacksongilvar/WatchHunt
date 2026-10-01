@@ -2,7 +2,7 @@
 
   python dashboard.py            # serves http://127.0.0.1:8000 and re-checks bids every few minutes
 
-The GitHub version (ci.py + .github/workflows/watchhunter.yml) builds the same board as a static page.
+The GitHub version (ci.py + .github/workflows/watchhunt.yml) builds the same board as a static page.
 """
 import os
 import threading
