@@ -1,0 +1,163 @@
+# Watch Hunter config. Edit freely. Restart not needed; it is read on every run.
+
+search:
+  min_price: 10
+  max_price: 200             # SKX test budget. Raise later.
+  polite_delay_seconds: 2    # pause between requests to the same site
+
+scoring:
+  min_score_for_digest: 4    # heuristic score needed to appear in the digest
+  min_score_for_ai: 5        # heuristic score needed to spend an AI call
+
+ai:
+  enabled: true
+  model: claude-sonnet-5-5   # any Claude model with vision
+  max_listings_per_run: 25   # hard cap on AI calls per run (cost control)
+  max_images_per_listing: 4
+
+comps:
+  shopgoodwill_sold: true    # look up recent ShopGoodwill sold prices for AI-identified watches
+
+ebay:
+  enabled: true
+  marketplace: EBAY_US
+  category_ids: ["31387"]    # Wristwatches
+  limit_per_query: 100
+  queries:
+    # SKX test targets
+    - seiko 7s26
+    - seiko diver automatic
+    - seiko skx
+    - seiko 200m automatic
+    # vague / low-effort listings
+    - old watch untested
+    - grandfathers watch
+    - estate watch
+    - vintage mens watch as is
+    - watch lot untested
+    - swiss watch not working
+    - gold watch unknown
+    - automatic watch needs service
+    # misspellings
+    - rolx
+    - rollex watch
+    - omeaga watch
+    - omgea
+    - seamster watch
+    - cartie watch
+    - catier watch
+    - sieko watch
+    - seico automatic
+    - longine watch
+    - brietling
+    - hueur
+    - tudur watch
+    - lecoultre watch
+    - patek phillipe
+
+shopgoodwill:
+  enabled: true
+  page_size: 40
+  queries:
+    - watch
+    - wristwatch
+    - watch lot
+    - vintage watch
+    - mens watch
+
+propertyroom:
+  enabled: true
+  pages_per_category: 3
+  category_paths:
+    - /c/watches_mens-watches
+    - /c/watches_bulk-lots
+    - /c/watches_womens-watches
+
+# Listings containing any of these are dropped before scoring.
+exclude_terms:
+  - homage
+  - replica
+  - inspired
+  - tribute
+  - style watch
+  - smartwatch
+  - smart watch
+  - apple watch
+  - fitbit
+  - band only
+  - strap only
+  - box only
+  - links only
+  - bracelet only
+  - oniss
+  - adee kaye
+  - invicta
+  - lechateau
+  - aquaswiss
+  - geneva platinum
+  - michael kors
+  - fossil
+  - guess
+  - armitron
+
+# Phrases that suggest the seller does not know what they have.
+vague_terms:
+  untested: 2
+  not running: 1
+  not working: 1
+  as is: 1
+  estate: 1
+  grandfather: 2
+  grandfathers: 2
+  grandpa: 2
+  dads: 1
+  found in: 1
+  unknown: 2
+  not sure: 2
+  no idea: 2
+  old watch: 2
+  needs service: 1
+  needs repair: 1
+  junk drawer: 2
+  for parts: 1
+
+# tier: 3 = high value, 2 = mid, 1 = entry.
+# also = legit alternate names or model names. misspellings = typos worth hunting.
+brands:
+  rolex:            {tier: 3, also: [oyster perpetual, datejust, submariner], misspellings: [rollex, rolx, rolax, roelx, rollx]}
+  cartier:          {tier: 3, also: [tank watch, santos], misspellings: [cartie, catier, cartiere]}
+  patek philippe:   {tier: 3, also: [patek], misspellings: [patek phillipe, patek philip, patek phillip]}
+  audemars piguet:  {tier: 3, also: [audemars], misspellings: [audemar]}
+  vacheron:         {tier: 3, also: [vacheron constantin], misspellings: [vacheron constantine]}
+  jaeger lecoultre: {tier: 3, also: [lecoultre, le coultre, jaeger le coultre], misspellings: [jagger lecoultre, le coulter]}
+  universal geneve: {tier: 3, also: [], misspellings: [universal geneva]}
+  heuer:            {tier: 3, also: [], misspellings: [hueur, huer, hauer]}
+  iwc:              {tier: 3, also: [schaffhausen], misspellings: []}
+  omega:            {tier: 2, also: [seamaster, speedmaster, constellation, de ville], misspellings: [omeaga, omgea, omege, seamster]}
+  tudor:            {tier: 2, also: [], misspellings: [tudur, tuder]}
+  breitling:        {tier: 2, also: [navitimer], misspellings: [brietling, brightling, breitlng]}
+  longines:         {tier: 2, also: [], misspellings: [longine, longenes, longins]}
+  zenith:           {tier: 2, also: [el primero], misspellings: []}
+  grand seiko:      {tier: 2, also: [], misspellings: []}
+  tag heuer:        {tier: 2, also: [], misspellings: [tag hauer, tag huer]}
+  seiko:            {tier: 1, also: [], misspellings: [sieko, seico, seko, seikko]}
+  hamilton:         {tier: 1, also: [], misspellings: [hamiltion]}
+  bulova:           {tier: 1, also: [accutron], misspellings: [bulvoa, bolova]}
+  gruen:            {tier: 1, also: [], misspellings: []}
+
+# Live board (python dashboard.py)
+dashboard:
+  host: 127.0.0.1          # use 0.0.0.0 to open it from your phone on the same wifi
+  port: 8000
+  refresh_minutes: 10      # how often to re-check bids on tracked watches
+  track_min_score: 6       # text-only listings at or above this also go on the board
+
+# Cost assumptions behind "net margin" and "max bid". VERIFY these; they drive every number.
+economics:
+  target_margin_pct: 30    # max bid is the highest price that still clears this margin at the LOW value estimate
+  sell_fee_pct: 15         # marketplace + payment fees where you resell
+  ship_in: 15              # what you pay to receive it
+  ship_out: 20             # insured shipping to your buyer
+  buyer_premium_pct: {ebay: 0, shopgoodwill: 0, propertyroom: 0}   # check each site's current terms
+  service_cost: {automatic: 350, manual: 300, quartz: 60, unknown: 250}
+  min_comps: 5             # sold results needed before sold data outranks the AI guess

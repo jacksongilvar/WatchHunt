@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Watch board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --dial:#17243a; --dial-2:#1f3050; --steel:#dfe4ea; --muted:#8e9bb0; --rule:#2c3d5c;
+  --brass:#c2a466; --brass-soft:rgba(194,164,102,.28); --lume:#86cdbd; --oxblood:#c9634b;
+  --figures:"Barlow Condensed","Arial Narrow",sans-serif; --text:"Barlow","Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme: light){
+  :root{--dial:#f1f2ee; --dial-2:#e4e7e2; --steel:#17243a; --muted:#5c6a80; --rule:#cfd4cc;
+        --brass:#9a7a37; --brass-soft:rgba(154,122,55,.22); --lume:#2f8a76; --oxblood:#b24a33;}
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--dial);color:var(--steel);font:15px/1.45 var(--text)}
+body{background:radial-gradient(120% 80% at 50% -10%, var(--dial-2), var(--dial) 60%) fixed}
+header{max-width:1240px;margin:0 auto;padding:28px 20px 12px;display:flex;flex-wrap:wrap;gap:16px 32px;align-items:end;justify-content:space-between}
+h1{font:600 44px/1 var(--figures);letter-spacing:.01em;margin:0}
+.status{color:var(--muted);font-size:14px}
+.status b{color:var(--steel);font-weight:500}
+.controls{max-width:1240px;margin:0 auto;padding:0 20px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:999px;overflow:hidden}
+.seg button,.btn{font:500 14px var(--text);color:var(--muted);background:none;border:0;padding:7px 14px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--brass-soft);color:var(--steel)}
+.btn{border:1px solid var(--rule);border-radius:999px;white-space:nowrap;text-decoration:none;display:inline-block}
+.seg button{white-space:nowrap}
+.ml{display:none}
+.btn:hover,.seg button:hover{color:var(--steel)}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.spacer{flex:1}
+.assume{max-width:1240px;margin:0 auto;padding:0 20px 18px;color:var(--muted);font-size:13px}
+
+main{max-width:1240px;margin:0 auto;padding:0 20px 60px}
+.head,.row>summary{display:grid;grid-template-columns:minmax(220px,2.2fr) 90px 92px 118px minmax(180px,1.6fr) 96px 92px 84px;gap:14px;align-items:center}
+.head{color:var(--muted);font-size:13px;padding:0 12px 8px;border-bottom:1px solid var(--rule)}
+.head .num,.num{text-align:right}
+.row{border-bottom:1px solid var(--rule)}
+.row>summary{list-style:none;padding:12px;cursor:pointer}
+.row>summary::-webkit-details-marker{display:none}
+.row[open]>summary,.row>summary:hover{background:rgba(255,255,255,.03)}
+.row.ended{opacity:.55}
+.watch{display:flex;gap:12px;align-items:center;min-width:0}
+.watch img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid var(--rule);flex:none;background:var(--dial-2)}
+.watch .t{min-width:0}
+.watch .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.watch .sub{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fig{font:500 20px/1.1 var(--figures);font-variant-numeric:tabular-nums}
+.small{font-size:12px;color:var(--muted)}
+.pos{color:var(--lume)} .neg{color:var(--oxblood)}
+.flash{animation:flash 1.6s ease-out}
+@keyframes flash{0%{background:var(--brass-soft)}100%{background:transparent}}
+.concern{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+
+/* The gauge: brass band = value range, needle = your all-in cost */
+.gauge{position:relative;height:34px}
+.gauge .track{position:absolute;left:0;right:0;top:16px;height:2px;background:var(--rule)}
+.gauge .ticks{position:absolute;left:0;right:0;top:11px;height:12px;
+  background:repeating-linear-gradient(90deg,var(--rule) 0 1px,transparent 1px 10%)}
+.gauge .band{position:absolute;top:10px;height:14px;background:var(--brass-soft);border:1px solid var(--brass);border-radius:3px}
+.gauge .band.ai{border-style:dashed}
+.gauge .mid{position:absolute;top:8px;width:1px;height:18px;background:var(--brass)}
+.gauge .needle{position:absolute;top:2px;width:2px;height:30px;border-radius:1px;transform:translateX(-1px)}
+.gauge .needle::after{content:"";position:absolute;left:-3px;bottom:-2px;width:8px;height:8px;border-radius:50%;background:inherit}
+.gauge .none{position:absolute;top:8px;font-size:12px;color:var(--muted)}
+
+.spark{width:84px;height:30px;display:block;margin-left:auto}
+.detail{padding:4px 12px 18px 72px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px 32px;color:var(--muted);font-size:14px}
+.detail b{color:var(--steel);font-weight:500}
+.detail ul{margin:4px 0 0;padding-left:18px}
+.detail .actions{display:flex;gap:8px;align-items:start}
+.empty{padding:48px 12px;color:var(--muted);max-width:60ch}
+.empty code{color:var(--steel)}
+.err{color:var(--oxblood);max-width:1240px;margin:0 auto;padding:0 20px 10px}
+
+@media (max-width:900px){
+  .head{display:none}
+  .row>summary{grid-template-columns:1fr auto;grid-template-areas:"w w" "p e" "g g" "n m";row-gap:8px}
+  .ml{display:block}
+  .controls .seg{max-width:100%;overflow-x:auto}
+  .c-watch{grid-area:w}.c-price{grid-area:p;text-align:left}.c-ends{grid-area:e;text-align:right}
+  .c-gauge{grid-area:g}.c-net{grid-area:n;text-align:left}.c-max{grid-area:m}
+  .c-value,.c-spark{display:none}
+  .detail{padding-left:12px}
+  h1{font-size:36px}
+}
+@media (prefers-reduced-motion: reduce){.flash{animation:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Watch board</h1>
+  <div class="status" id="status" aria-live="polite">Loading…</div>
+</header>
+<div class="err" id="err" hidden></div>
+<div class="controls">
+  <div class="seg" role="group" aria-label="Filter">
+    <button data-f="all" aria-pressed="true">All live</button>
+    <button data-f="soon" aria-pressed="false">Ending in 24h</button>
+    <button data-f="clears" aria-pressed="false">Under max bid</button>
+    <button data-f="ended" aria-pressed="false">Ended</button>
+  </div>
+  <div class="seg" role="group" aria-label="Sort">
+    <button data-s="margin" aria-pressed="true">Best margin</button>
+    <button data-s="ending" aria-pressed="false">Ending soonest</button>
+  </div>
+  <label class="small"><input type="checkbox" id="hideHigh" checked> Hide high fake risk</label>
+  <span class="spacer"></span>
+  <button class="btn" id="refresh">Check bids now</button>
+</div>
+<p class="assume" id="assume"></p>
+<main>
+  <div class="head" aria-hidden="true">
+    <div>Watch</div><div class="num">Price</div><div class="num">Ends</div><div class="num">Value</div>
+    <div>Cost vs value</div><div class="num">Net at mid</div><div class="num">Max bid</div><div class="num">Trend</div>
+  </div>
+  <div id="rows"></div>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const money = v => v == null ? "–" : (v < 0 ? "−$" : "$") + Math.abs(v).toLocaleString(undefined,{maximumFractionDigits:0});
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const CONCERN = {none_visible:["var(--lume)","No visible red flags (not proof)"], some:["var(--brass)","Some concerns"],
+                 high:["var(--oxblood)","High fake risk"], cannot_assess:["var(--muted)","Photos too poor to judge"]};
+let data = {rows:[]}, filter = "all", sort = "margin", prevPrice = {}, openKeys = new Set();
+const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
+const HIDDEN_KEY = "wh-hidden";
+function hidden(){ try { return new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) || "[]")); } catch(e){ return new Set(); } }
+function hide(key){ try { const h = hidden(); h.add(key); localStorage.setItem(HIDDEN_KEY, JSON.stringify([...h])); } catch(e){} }
+
+function hoursLeft(r){
+  if (r.end_time){ const t = Date.parse(r.end_time.endsWith("Z")||/[+-]\d\d:\d\d$/.test(r.end_time) ? r.end_time : r.end_time + "Z");
+    if (!isNaN(t)) return (t - Date.now())/3.6e6; }
+  if (r.time_left){ const g = k => +((r.time_left.match(new RegExp("(\\d+)"+k))||[0,0])[1]); return g("d")*24+g("h")+g("m")/60; }
+  return null;
+}
+function fmtLeft(h){
+  if (h == null) return "–"; if (h <= 0) return "Ended";
+  const d = Math.floor(h/24), hh = Math.floor(h%24), m = Math.floor((h*60)%60);
+  return d ? `${d}d ${hh}h` : hh ? `${hh}h ${m}m` : `${m}m`;
+}
+function gauge(r){
+  const e = r.econ, v = e.value;
+  if (!v) return `<div class="gauge"><span class="none">No value estimate yet</span></div>`;
+  const max = Math.max(v.high, e.all_in) * 1.12, pct = x => (100 * x / max).toFixed(2) + "%";
+  const color = e.max_bid != null && r.price <= e.max_bid ? "var(--lume)" : e.net_low > 0 ? "var(--brass)" : "var(--oxblood)";
+  return `<div class="gauge" title="Brass band: value ${money(v.low)} to ${money(v.high)} (${esc(v.basis_note)}). Needle: your all-in cost ${money(e.all_in)}. Green clears your target margin, brass is profitable but thin, red loses money at the low estimate.">
+    <div class="ticks"></div><div class="track"></div>
+    <div class="band ${v.basis}" style="left:${pct(v.low)};width:calc(${pct(v.high)} - ${pct(v.low)})"></div>
+    <div class="mid" style="left:${pct(v.mid)}"></div>
+    <div class="needle" style="left:${pct(e.all_in)};background:${color}"></div></div>`;
+}
+function spark(hist){
+  if (!hist || hist.length < 2) return `<span class="small">–</span>`;
+  const ps = hist.map(h => h.price), lo = Math.min(...ps), hi = Math.max(...ps), span = hi - lo || 1;
+  const pts = ps.map((p,i) => `${(i/(ps.length-1)*82+1).toFixed(1)},${(28 - (p-lo)/span*26).toFixed(1)}`).join(" ");
+  return `<svg class="spark" viewBox="0 0 84 30" aria-label="Price history"><polyline fill="none" stroke="var(--brass)" stroke-width="1.5" points="${pts}"/></svg>`;
+}
+function row(r){
+  const e = r.econ, v = e.value, h = hoursLeft(r), [cc, cl] = CONCERN[r.concern] || ["var(--muted)","Not AI checked"];
+  const flashed = prevPrice[r.key] != null && prevPrice[r.key] !== r.price ? " flash" : "";
+  const netCls = e.net_mid == null ? "" : e.net_mid >= 0 ? "pos" : "neg";
+  const under = e.max_bid != null && r.price <= e.max_bid;
+  return `<details class="row ${r.status}" data-key="${esc(r.key)}" ${openKeys.has(r.key) ? "open" : ""}>
+  <summary>
+    <div class="c-watch watch">${r.image ? `<img src="${esc(r.image)}" alt="" loading="lazy">` : `<img alt="">`}
+      <div class="t"><div class="name">${esc(r.name || r.title)}</div>
+      <div class="sub"><span class="concern" style="background:${cc}" title="${cl}"></span>${esc(r.source)}${r.reference ? " " + esc(r.reference) : ""}${r.era ? ", " + esc(r.era) : ""}</div></div></div>
+    <div class="c-price num"><div class="fig${flashed}">${money(r.price)}</div><div class="small">${r.bids != null ? r.bids + " bids" : "buy now"}</div></div>
+    <div class="c-ends num"><div class="fig" data-left="${esc(r.key)}">${r.status === "ended" ? "Ended" : fmtLeft(h)}</div></div>
+    <div class="c-value num"><div class="fig">${v ? money(v.mid) : "–"}</div><div class="small">${v ? (v.basis === "sold" ? "sold data" : "AI guess") : ""}</div></div>
+    <div class="c-gauge">${gauge(r)}</div>
+    <div class="c-net num"><div class="small ml">Net at mid</div><div class="fig ${netCls}">${money(e.net_mid)}</div><div class="small">${e.margin_pct != null ? e.margin_pct + "%" : ""}</div></div>
+    <div class="c-max num"><div class="small ml">Max bid</div><div class="fig ${under ? "pos" : ""}">${e.max_bid === 0 ? "Pass" : money(e.max_bid)}</div><div class="small">${e.max_bid === 0 ? "too thin" : under ? "price is under" : e.max_bid != null ? "price is over" : ""}</div></div>
+    <div class="c-spark">${spark(r.history)}</div>
+  </summary>
+  <div class="detail">
+    <div><b>${esc(r.title)}</b><div>${esc(r.summary)}</div></div>
+    <div><b>${cl}</b>${r.flags && r.flags.length ? `<ul>${r.flags.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}</div>
+    <div><b>How the numbers work</b><div>All-in cost ${money(e.all_in)} includes ${money(e.service)} service and inbound shipping.
+      ${v ? `Value ${money(v.low)} to ${money(v.high)} from ${esc(v.basis_note)}. Max bid uses the low end.` : "Needs sold data or an AI estimate."}</div></div>
+    <div class="actions"><a class="btn" href="${esc(r.url)}" target="_blank" rel="noopener">Open listing</a>
+      <button class="btn" data-dismiss="${esc(r.key)}">${LOCAL ? "Remove from board" : "Hide on this device"}</button></div>
+  </div></details>`;
+}
+function render(){
+  const hid = LOCAL ? new Set() : hidden();
+  let rows = data.rows.filter(r => !hid.has(r.key) && (filter === "ended" ? r.status === "ended" : r.status === "active"));
+  if (filter === "soon") rows = rows.filter(r => { const h = hoursLeft(r); return h != null && h < 24; });
+  if (filter === "clears") rows = rows.filter(r => r.econ.max_bid != null && r.price <= r.econ.max_bid);
+  if ($("#hideHigh").checked) rows = rows.filter(r => r.concern !== "high");
+  rows.sort(sort === "ending"
+    ? (a,b) => (hoursLeft(a) ?? 1e9) - (hoursLeft(b) ?? 1e9)
+    : (a,b) => (b.econ.margin_pct ?? -1e9) - (a.econ.margin_pct ?? -1e9));
+  $("#rows").innerHTML = rows.length ? rows.map(row).join("") :
+    data.rows.length ? `<p class="empty">Nothing matches this filter.</p>` :
+    `<p class="empty">The board fills from your daily runs. Run <code>python main.py</code>, then reload. Every AI-checked watch lands here.</p>`;
+  data.rows.forEach(r => prevPrice[r.key] = r.price);
+}
+function status(){
+  const s = data.state || {}, when = s.last_refresh ? Math.round((Date.now() - Date.parse(s.last_refresh))/60000) : null;
+  const live = data.rows.filter(r => r.status === "active").length;
+  $("#status").innerHTML = `<b>${live}</b> watches live. ` +
+    (s.refreshing ? "Checking bids now." : when == null ? "Bids not checked yet." :
+      data.mode === "static" ? `Updated <b>${when} min</b> ago. Refreshes about hourly.` : `Bids checked <b>${when} min</b> ago, every ${data.refresh_minutes} min.`);
+  const a = data.assumptions || {};
+  $("#assume").textContent = `Assumes ${a.sell_fee_pct}% selling fees, $${a.ship_in} shipping in, $${a.ship_out} shipping out and a ${a.target_margin_pct}% target margin. Change these in config.yaml. Dashed bands are AI guesses, solid bands are sold data. The needle is your all-in cost: green clears your target, brass is thin, red loses money at the low estimate.`;
+  $("#err").hidden = !s.last_error; $("#err").textContent = s.last_error ? "Last bid check failed: " + s.last_error : "";
+}
+async function load(){
+  try { data = await (await fetch(LOCAL ? "/api/board" : "board.json?t=" + Date.now(), {cache: "no-store"})).json(); render(); status(); setupRefresh(); }
+  catch(e){ $("#status").textContent = LOCAL ? "Can't reach the board server. Is python dashboard.py running?" : "Board data not published yet. Run the workflow on GitHub first."; }
+}
+document.addEventListener("click", async ev => {
+  const f = ev.target.closest("[data-f]"), s = ev.target.closest("[data-s]"), d = ev.target.closest("[data-dismiss]");
+  if (f){ filter = f.dataset.f; document.querySelectorAll("[data-f]").forEach(b => b.setAttribute("aria-pressed", b === f)); render(); }
+  if (s){ sort = s.dataset.s; document.querySelectorAll("[data-s]").forEach(b => b.setAttribute("aria-pressed", b === s)); render(); }
+  if (d){ if (LOCAL){ await fetch("/api/dismiss",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:d.dataset.dismiss})}); load(); } else { hide(d.dataset.dismiss); render(); } }
+});
+document.addEventListener("toggle", ev => { const k = ev.target.dataset?.key; if (k) ev.target.open ? openKeys.add(k) : openKeys.delete(k); }, true);
+$("#hideHigh").addEventListener("change", render);
+let refreshWired = false;
+function setupRefresh(){
+  if (refreshWired) return; refreshWired = true;
+  const btn = $("#refresh");
+  if (LOCAL){
+    btn.addEventListener("click", async () => { await fetch("/api/refresh",{method:"POST"}); $("#status").textContent = "Checking bids now."; setTimeout(load, 4000); });
+  } else if (data.actions_url){
+    btn.textContent = "Run now on GitHub";
+    btn.addEventListener("click", () => window.open(data.actions_url, "_blank", "noopener"));
+  } else { btn.style.display = "none"; }
+}
+setInterval(load, LOCAL ? 30000 : 300000);
+setInterval(() => document.querySelectorAll("[data-left]").forEach(el => {
+  const r = data.rows.find(x => x.key === el.dataset.left); if (r && r.status === "active") el.textContent = fmtLeft(hoursLeft(r));
+}), 30000);
+load();
+</script>
+</body>
+</html>
