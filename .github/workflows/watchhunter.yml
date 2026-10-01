@@ -1,0 +1,96 @@
+name: watchhunter
+
+on:
+  schedule:
+    - cron: "17 */3 * * *"   # full scan every 3 hours (UTC)
+    - cron: "47 * * * *"     # bid refresh every hour
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "scan (find new listings) or refresh (update bids only)"
+        default: scan
+        type: choice
+        options: [scan, refresh]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: watchhunter
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EBAY_CLIENT_ID: ${{ secrets.EBAY_CLIENT_ID }}
+      EBAY_CLIENT_SECRET: ${{ secrets.EBAY_CLIENT_SECRET }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASS: ${{ secrets.SMTP_PASS }}
+      DIGEST_TO: ${{ secrets.DIGEST_TO }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore saved state
+        run: |
+          if git fetch --depth 1 origin state 2>/dev/null; then
+            git show FETCH_HEAD:watchhunter.db > watchhunter.db && echo "State restored."
+          else
+            echo "No saved state yet (first run)."
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Scan for new listings
+        if: github.event.schedule == '17 */3 * * *' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'scan')
+        run: python main.py
+
+      - name: Refresh bids on the board
+        run: python ci.py refresh
+
+      - name: Build board page
+        run: python ci.py export site
+
+      - name: Save state
+        run: |
+          mkdir -p /tmp/state && cp watchhunter.db /tmp/state/
+          cd /tmp/state
+          git init -q -b state
+          git add watchhunter.db
+          git -c user.name="watchhunter-bot" -c user.email="watchhunter-bot@users.noreply.github.com" \
+              commit -qm "state $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" state
+
+      - name: Keep digests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests
+          path: digests/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: run
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
