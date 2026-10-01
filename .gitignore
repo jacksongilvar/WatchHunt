@@ -1,0 +1,8 @@
+.env
+Watchunter_Github/watchhunter-github/.env
+*.db
+digests/
+site/
+.DS_Store
+__pycache__/
+env.txt
