@@ -46,13 +46,28 @@ JSON schema:
 }"""
 
 
+def _sniff(data):
+    """Some image hosts send a generic content type, so check the file's first bytes."""
+    if data[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        return "image/gif"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
 def _load_image(url):
     try:
-        r = requests.get(url, timeout=20, headers={"User-Agent": "Mozilla/5.0"})
+        r = requests.get(url, timeout=20, headers={
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36",
+            "Referer": url.split("/", 3)[0] + "//" + url.split("/", 3)[2] + "/"})
         r.raise_for_status()
     except requests.RequestException:
         return None
-    ctype = r.headers.get("Content-Type", "").split(";")[0].strip().lower()
+    ctype = _sniff(r.content) or r.headers.get("Content-Type", "").split(";")[0].strip().lower()
     if ctype == "image/jpg":
         ctype = "image/jpeg"
     if ctype not in SUPPORTED or len(r.content) > MAX_BYTES:

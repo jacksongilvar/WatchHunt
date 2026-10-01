@@ -9,6 +9,8 @@ import json
 import re
 import statistics
 import time
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -41,6 +43,22 @@ def _body(query, page=1, page_size=40, closed=False, lo=0, hi=999999):
         "searchUSOnlyShipping": "false", "categoryLevelNo": "1", "categoryLevel": 1,
         "categoryId": 0, "partNumber": "", "catIds": "",
     }
+
+
+PACIFIC = ZoneInfo("America/Los_Angeles")
+
+
+def to_utc(value):
+    """ShopGoodwill end times are Pacific time with no timezone attached. Return UTC ISO with Z."""
+    if not value:
+        return value
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return value
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=PACIFIC)
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _find_items(obj):
@@ -102,7 +120,7 @@ class ShopGoodwillSource:
                     url=f"https://shopgoodwill.com/item/{iid}",
                     price=float(it.get("currentPrice") or it.get("minimumBid") or 0),
                     bids=it.get("numBids"),
-                    end_time=it.get("endTime"),
+                    end_time=to_utc(it.get("endTime")),
                     buying_format="auction",
                     image_urls=[img] if img else [],
                     seller=str(it.get("sellerName") or ""),
@@ -158,7 +176,7 @@ class ShopGoodwillSource:
             if d.get(k) is not None:
                 listing.bids = int(d[k])
                 break
-        listing.end_time = d.get("endTime") or listing.end_time
+        listing.end_time = to_utc(d.get("endTime")) or to_utc(listing.end_time)
         if d.get("isEnded") or d.get("itemEnded"):
             return False
         return True

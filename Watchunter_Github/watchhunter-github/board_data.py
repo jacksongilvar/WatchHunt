@@ -22,7 +22,12 @@ def refresh_bids(store, cfg):
     from main import build_sources
     sources = {s.name: s for s in build_sources(cfg, {"ebay", "shopgoodwill", "propertyroom"}, False)}
     checked = 0
-    for lst, _status, _ in store.tracked(("active",)):
+    for lst, status, _ in store.tracked(("active", "ended")):
+        if lst.source == "shopgoodwill":
+            from source_shopgoodwill import to_utc
+            lst.end_time = to_utc(lst.end_time)
+        if status == "ended" and (_ended_by_clock(lst) or not lst.end_time):
+            continue  # genuinely over; earlier versions could mark live auctions ended by mistake
         src = sources.get(lst.source)
         if not src or not hasattr(src, "refresh"):
             continue
