@@ -63,6 +63,7 @@ main{max-width:1240px;margin:0 auto;padding:0 20px 60px}
   background:repeating-linear-gradient(90deg,var(--rule) 0 1px,transparent 1px 10%)}
 .gauge .band{position:absolute;top:10px;height:14px;background:var(--brass-soft);border:1px solid var(--brass);border-radius:3px}
 .gauge .band.ai{border-style:dashed}
+.gauge .band.market{border-style:dotted}
 .gauge .mid{position:absolute;top:8px;width:1px;height:18px;background:var(--brass)}
 .gauge .needle{position:absolute;top:2px;width:2px;height:30px;border-radius:1px;transform:translateX(-1px)}
 .gauge .needle::after{content:"";position:absolute;left:-3px;bottom:-2px;width:8px;height:8px;border-radius:50%;background:inherit}
@@ -161,6 +162,15 @@ function spark(hist){
   const pts = ps.map((p,i) => `${(i/(ps.length-1)*82+1).toFixed(1)},${(28 - (p-lo)/span*26).toFixed(1)}`).join(" ");
   return `<svg class="spark" viewBox="0 0 84 30" aria-label="Price history"><polyline fill="none" stroke="var(--brass)" stroke-width="1.5" points="${pts}"/></svg>`;
 }
+const BASIS = {sold: "sold data", market: "Lens market", ai: "AI guess"};
+function marketHtml(r){
+  const m = r.market;
+  if (!m) return "";
+  if (m.skipped === "lot") return `<div><b>Google Lens</b><div>Multi-watch lot, so Lens prices are not used. Value is the AI estimate for the whole lot.</div></div>`;
+  if (!m.count) return `<div><b>Google Lens</b><div>${r.lens_guess ? "Best guess: " + esc(r.lens_guess) + ". " : ""}No priced matches for this model.</div></div>`;
+  return `<div><b>Google Lens asking prices</b><div>${m.count} secondhand ${m.match_level === "reference" ? "exact-reference" : "brand + model"} matches, median ${money(m.median)}, ${money(m.low)} to ${money(m.high)}.</div>
+    <ul>${(m.examples || []).map(x => `<li><a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.title)}</a> ${esc(x.source)} ${money(x.price)}</li>`).join("")}</ul></div>`;
+}
 function row(r){
   const e = r.econ, v = e.value, h = hoursLeft(r), [cc, cl] = CONCERN[r.concern] || ["var(--muted)","Not AI checked"];
   const flashed = prevPrice[r.key] != null && prevPrice[r.key] !== r.price ? " flash" : "";
@@ -173,7 +183,7 @@ function row(r){
       <div class="sub"><span class="concern" style="background:${cc}" title="${cl}"></span>${esc(r.source)}${r.reference ? " " + esc(r.reference) : ""}${r.era ? ", " + esc(r.era) : ""}</div></div></div>
     <div class="c-price num"><div class="fig${flashed}">${money(r.price)}</div><div class="small">${r.bids != null ? r.bids + " bids" : "buy now"}</div></div>
     <div class="c-ends num"><div class="fig" data-left="${esc(r.key)}">${r.status === "ended" ? "Ended" : fmtLeft(h)}</div></div>
-    <div class="c-value num"><div class="fig">${v ? money(v.mid) : "–"}</div><div class="small">${v ? (v.basis === "sold" ? "sold data" : "AI guess") : ""}</div></div>
+    <div class="c-value num"><div class="fig">${v ? money(v.mid) : "–"}</div><div class="small">${v ? BASIS[v.basis] || v.basis : ""}</div></div>
     <div class="c-gauge">${gauge(r)}</div>
     <div class="c-net num"><div class="small ml">Net at mid</div><div class="fig ${netCls}">${money(e.net_mid)}</div><div class="small">${e.margin_pct != null ? e.margin_pct + "%" : ""}</div></div>
     <div class="c-max num"><div class="small ml">Max bid</div><div class="fig ${under ? "pos" : ""}">${e.max_bid === 0 ? "Pass" : money(e.max_bid)}</div><div class="small">${e.max_bid === 0 ? "too thin" : under ? "price is under" : e.max_bid != null ? "price is over" : ""}</div></div>
@@ -182,8 +192,9 @@ function row(r){
   <div class="detail">
     <div><b>${esc(r.title)}</b><div>${esc(r.summary)}</div></div>
     <div><b>${cl}</b>${r.flags && r.flags.length ? `<ul>${r.flags.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}</div>
-    <div><b>How the numbers work</b><div>All-in cost ${money(e.all_in)} includes ${money(e.service)} service and inbound shipping.
+    <div><b>How the numbers work</b><div>All-in cost ${money(e.all_in)} includes ${money(e.service)} service and ${money(e.ship_in)} inbound shipping${e.ship_in_basis === "listing" ? " (from the listing)" : " (estimate)"}.
       ${v ? `Value ${money(v.low)} to ${money(v.high)} from ${esc(v.basis_note)}. Max bid uses the low end.` : "Needs sold data or an AI estimate."}</div></div>
+    ${marketHtml(r)}
     <div class="actions"><a class="btn" href="${esc(r.url)}" target="_blank" rel="noopener">Open listing</a>
       <button class="btn" data-dismiss="${esc(r.key)}">${LOCAL ? "Remove from board" : "Hide on this device"}</button></div>
   </div></details>`;
@@ -209,7 +220,7 @@ function status(){
     (s.refreshing ? "Checking bids now." : when == null ? "Bids not checked yet." :
       data.mode === "static" ? `Updated <b>${when} min</b> ago. Refreshes about hourly.` : `Bids checked <b>${when} min</b> ago, every ${data.refresh_minutes} min.`);
   const a = data.assumptions || {};
-  $("#assume").textContent = `Assumes ${a.sell_fee_pct}% selling fees, $${a.ship_in} shipping in, $${a.ship_out} shipping out and a ${a.target_margin_pct}% target margin. Change these in config.yaml. Dashed bands are AI guesses, solid bands are sold data. The needle is your all-in cost: green clears your target, brass is thin, red loses money at the low estimate.`;
+  $("#assume").textContent = `Assumes ${a.sell_fee_pct}% selling fees, $${a.ship_in} shipping in, $${a.ship_out} shipping out and a ${a.target_margin_pct}% target margin. Change these in config.yaml. Solid bands are sold data, dotted bands are discounted Google Lens asking prices, dashed bands are AI guesses. The needle is your all-in cost: green clears your target, brass is thin, red loses money at the low estimate.`;
   $("#err").hidden = !s.last_error; $("#err").textContent = s.last_error ? "Last bid check failed: " + s.last_error : "";
 }
 async function load(){

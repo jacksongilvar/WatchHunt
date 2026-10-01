@@ -59,6 +59,19 @@ def _card(lst):
                       f'median ${c["median"]:,.0f}, range ${c["low"]:,.0f} to ${c["high"]:,.0f}. '
                       f'Loose keyword match, check the listings.</div>')
 
+    m = lst.market
+    if m and m.get("count"):
+        ex = "".join(f'<li><a href="{_e(x["link"])}">{_e(x["title"])}</a> ({_e(x["source"])}) ${x["price"]:,.0f}</li>'
+                     for x in m.get("examples", []))
+        comps_html += (f'<div><b>Google Lens asking prices:</b> {m["count"]} matches, median ${m["median"]:,.0f}, '
+                       f'range ${m["low"]:,.0f} to ${m["high"]:,.0f}. Asking, not sold.'
+                       f'<ul style="margin:2px 0">{ex}</ul></div>')
+    elif m and m.get("skipped") == "lot":
+        comps_html += '<div><b>Google Lens:</b> multi-watch lot, Lens prices not used.</div>'
+    elif lst.lens:
+        guess = (lst.lens or {}).get("best_guess")
+        comps_html += f'<div><b>Google Lens:</b> {_e("best guess " + guess + ", " if guess else "")}no priced matches.</div>'
+
     return f"""
     <table style="width:100%;border-bottom:1px solid #ddd;padding:10px 0"><tr>
       <td style="width:150px;vertical-align:top">{img}</td>

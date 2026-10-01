@@ -15,6 +15,22 @@ ai:
   max_listings_per_run: 25   # hard cap on AI calls per run (cost control)
   max_images_per_listing: 4
 
+# Google Lens via SerpApi (serpapi.com). Runs on each AI-checked listing's main photo, before Claude.
+# Lens match titles help Claude identify the watch; priced matches become the "market" value band.
+# Each lookup is one SerpApi search. Needs SERPAPI_API_KEY.
+lens:
+  enabled: true
+  max_per_run: 1             # hard cap on Lens searches per run (cost control). 1 x 8 scans/day fits the free plan
+  country: us
+  max_matches: 40            # visual matches kept per photo
+  min_reference_matches: 3   # price from exact-reference matches when at least this many, else brand + model
+  # Only prices from these secondhand sites count. New retail (Macy's, Amazon, brand sites) overstates used value.
+  used_sources: [ebay, mercari, poshmark, chrono24, watchuseek, etsy, shopgoodwill, offerup, facebook,
+                 grailzee, crownandcaliber, crown & caliber, bobswatches, bob's watches, watchbox, thewatchbox,
+                 1stdibs, ruby lane, rubylane, worthpoint, hibid, liveauctioneers, propertyroom, reddit,
+                 omegaforums, rolexforums, watchcharts, depop, vinted, carousell,
+                 secondhand, second hand, pre-owned, preowned]
+
 comps:
   shopgoodwill_sold: true    # look up recent ShopGoodwill sold prices for AI-identified watches
 
@@ -160,4 +176,7 @@ economics:
   ship_out: 20             # insured shipping to your buyer
   buyer_premium_pct: {ebay: 0, shopgoodwill: 0, propertyroom: 0}   # check each site's current terms
   service_cost: {automatic: 350, manual: 300, quartz: 60, unknown: 250}
-  min_comps: 5             # sold results needed before sold data outranks the AI guess
+  min_comps: 5             # sold results needed before sold data outranks everything else
+  lens:
+    min_prices: 4          # priced Lens matches needed before market data outranks the AI guess
+    asking_discount: 0.8   # asking prices run above what watches actually sell for; value = asking x this

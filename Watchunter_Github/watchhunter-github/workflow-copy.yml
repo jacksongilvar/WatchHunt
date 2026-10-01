@@ -29,6 +29,7 @@ jobs:
       EBAY_CLIENT_ID: ${{ secrets.EBAY_CLIENT_ID }}
       EBAY_CLIENT_SECRET: ${{ secrets.EBAY_CLIENT_SECRET }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
       SMTP_HOST: ${{ secrets.SMTP_HOST }}
       SMTP_PORT: ${{ secrets.SMTP_PORT }}
       SMTP_USER: ${{ secrets.SMTP_USER }}

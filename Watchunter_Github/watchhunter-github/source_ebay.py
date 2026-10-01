@@ -21,6 +21,18 @@ def _strip_html(html: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html or "")).strip()
 
 
+def _shipping(d):
+    """Cheapest stated shipping cost, or None when eBay does not give one (calculated shipping)."""
+    costs = []
+    for o in d.get("shippingOptions") or []:
+        c = (o.get("shippingCost") or {}).get("value")
+        try:
+            costs.append(float(c))
+        except (TypeError, ValueError):
+            pass
+    return min(costs) if costs else None
+
+
 class EbaySource:
     name = "ebay"
 
@@ -92,6 +104,7 @@ class EbaySource:
             image_urls=images,
             description=s.get("shortDescription", "") or "",
             seller=(s.get("seller") or {}).get("username", ""),
+            shipping=_shipping(s),
         )
 
     def enrich(self, listing: Listing):
@@ -109,6 +122,8 @@ class EbaySource:
         imgs = [i for i in imgs if i]
         if imgs:
             listing.image_urls = imgs
+        if _shipping(d) is not None:
+            listing.shipping = _shipping(d)
         return listing
 
     def refresh(self, listing: Listing):

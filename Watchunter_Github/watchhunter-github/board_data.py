@@ -60,6 +60,8 @@ def build_board(store, cfg):
             "flags": ai.get("visible_red_flags", []) if ai else [],
             "summary": ai.get("summary", "") if ai else "; ".join(lst.reasons),
             "econ": numbers(lst, econ),
+            "market": lst.market,
+            "lens_guess": (lst.lens or {}).get("best_guess"),
             "history": store.history(lst.key),
         })
     return {

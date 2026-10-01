@@ -24,11 +24,20 @@ Rules:
 - Be specific about red flags: dial printing and font, logo shape, date window and cyclops, hands, crown, bezel,
   case shape and finishing, lug proportions, caseback engravings, bracelet and clasp, movement if shown,
   mismatched parts from different eras or references (frankenwatch), redials, relumes, heavy polishing.
+- If the listing is a lot of several watches, set is_lot true, put the most valuable watch in brand/model/
+  reference_guess, list each watch briefly in lot_items, and give a value range for the whole lot.
+- Keep every string short. The whole reply must be complete, valid JSON.
 - If photos are too poor to judge, say so. Poor photos are a finding, not a reason to guess.
 - Value ranges are rough guesses from general knowledge, not sold data. Keep them wide and honest.
+  Value it as-is, in the condition shown, at typical pre-owned resale prices, not retail.
+- Google Lens matches may be included. They are visually similar pages, often right about brand and model,
+  sometimes wrong. Use them as evidence, check them against the photos, and say in the summary if you
+  disagree with them. A match listing does not make this watch genuine.
 
 JSON schema:
 {
+  "is_lot": boolean,
+  "lot_items": [string],
   "brand": string or null,
   "model": string or null,
   "reference_guess": string or null,
@@ -92,7 +101,7 @@ class Vision:
         self.client = anthropic.Anthropic(api_key=api_key)
         self.model, self.max_images = model, max_images
 
-    def analyze(self, listing: Listing):
+    def analyze(self, listing: Listing, hints: str = ""):
         blocks = [b for b in (_load_image(u) for u in listing.image_urls[: self.max_images]) if b]
         if not blocks:
             return {"summary": "No usable images could be downloaded.", "authenticity_concern": "cannot_assess",
@@ -104,10 +113,12 @@ class Vision:
             f"Description: {listing.description[:2000] or '(none)'}\n"
             f"Photos attached: {len(blocks)}"
         )
+        if hints:
+            text += "\n\n" + hints
         try:
             msg = self.client.messages.create(
                 model=self.model,
-                max_tokens=1200,
+                max_tokens=3000,
                 system=SYSTEM,
                 messages=[{"role": "user", "content": blocks + [{"type": "text", "text": text}]}],
             )

@@ -8,7 +8,7 @@ GitHub runs the tool on a schedule and publishes the board as a web page:
 - Board page at https://YOUR-USERNAME.github.io/watchhunter/
 
 The workflow lives in `.github/workflows/watchhunter.yml` (a copy is in `workflow-copy.yml` because Finder hides folders starting with a dot).
-Keys go in Settings > Secrets and variables > Actions, never in files.
+Keys go in Settings > Secrets and variables > Actions, never in files. Add `SERPAPI_API_KEY` there for Google Lens.
 Saved state (what has been seen, price history) lives on a branch called `state` that the workflow overwrites each run.
 To run it right away: Actions tab > watchhunter > Run workflow.
 
@@ -26,6 +26,7 @@ AI output is triage, not authentication. Nothing in the digest means a watch is 
 4. `cp .env.example .env` and fill it in:
    - **eBay:** create a developer account at developer.ebay.com, create a Production keyset and copy the App ID (client ID) and Cert ID (client secret).
    - **Anthropic:** create an API key at console.anthropic.com.
+   - **Google Lens (SerpApi):** create an account at serpapi.com and copy your API key into `SERPAPI_API_KEY`. Google has no public Lens API, so SerpApi runs the Lens search. One search per AI-checked listing.
    - **Email (optional):** for Gmail, turn on 2-step verification and create an App Password.
 5. Test without spending on AI: `python main.py --no-ai`
 6. Full run: `python main.py`
@@ -47,8 +48,12 @@ Your Mac has to be awake. For reliability, move it to a small cloud server later
 Open http://localhost:8000. Every AI-checked watch from `main.py` lands on the board. The board re-checks current bids every 10 minutes and refreshes itself every 30 seconds.
 
 Each row shows:
-- **Value:** from ShopGoodwill sold data when there are at least 5 sales, otherwise the AI's guess. The board labels which one it used, and AI guesses get a dashed band.
-- **Cost vs value gauge:** the brass band is the value range. The needle is your all-in cost: price plus inbound shipping plus a service estimate. A green needle clears your target margin, brass is profitable but thin, and red loses money at the low estimate.
+- **Value:** in order of trust:
+  1. ShopGoodwill sold data when there are at least 5 sales (solid band).
+  2. Google Lens market: listings that Lens matched to the photo, filtered to the same brand and model, with prices. The p25 to p75 asking range is multiplied by `economics.lens.asking_discount` (default 0.8) because asking prices run above sale prices (dotted band).
+  3. The AI's guess (dashed band).
+  The board labels which one it used. Lens matches also go into the Claude prompt, so identification is better even when there are no prices.
+- **Cost vs value gauge:** the brass band is the value range. The needle is your all-in cost: price plus inbound shipping (the listing's stated shipping on eBay when it has one, otherwise `ship_in`) plus a service estimate. A green needle clears your target margin, brass is profitable but thin, and red loses money at the low estimate.
 - **Net at mid:** profit if it sells at the middle of the value range, after selling fees and shipping out.
 - **Max bid:** the highest price that still clears your target margin at the LOW value estimate. "Pass" means no price does.
 
@@ -74,6 +79,7 @@ Listings are only shown once. Use `--include-seen` to re-show old ones.
 - **PropertyRoom** is parsed from HTML. If the site changes layout, the regex in `source_propertyroom.py` needs updating. It respects robots.txt and skips pages it disallows.
 - **ShopGoodwill sold comps** are a loose keyword match. Treat them as a starting point.
 - AI value ranges are guesses. Always check eBay sold listings (linked on every card).
+- **Google Lens market** prices are asking prices from whatever pages Lens matched, filtered by keyword. They can include different references, dial variants or condition. The examples are listed under each row so you can check them. Tune `asking_discount` once you have your own sold history.
 
 ## Not in v1
 

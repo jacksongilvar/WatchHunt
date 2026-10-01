@@ -17,6 +17,7 @@ class Listing:
     image_urls: list = field(default_factory=list)
     description: str = ""
     seller: str = ""
+    shipping: Optional[float] = None  # inbound shipping when the source states it; None = use config estimate
 
     # filled in later
     score: int = 0
@@ -24,6 +25,8 @@ class Listing:
     brand_hint: Optional[str] = None
     ai: Optional[dict] = None
     comps: Optional[dict] = None
+    lens: Optional[dict] = None     # Google Lens matches for the main photo
+    market: Optional[dict] = None   # asking-price band from Lens matches
 
     @property
     def key(self) -> str:
