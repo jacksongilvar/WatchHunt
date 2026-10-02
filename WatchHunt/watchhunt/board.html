@@ -205,8 +205,9 @@ function genuineTag(r){
     const cls = e.genuine_chance >= 0.6 ? "pos" : e.genuine_chance >= 0.3 ? "" : "risk";
     return `<div class="small ${cls}">${pct100(e.genuine_chance)} genuine</div>`;
   }
-  if (r.concern && !r.is_lot) return `<div class="small">rarely faked</div>`;
-  return "";
+  if (r.is_lot) return `<div class="small">mixed lot</div>`;
+  if (r.concern) return `<div class="small">rarely faked</div>`;
+  return `<div class="small">not checked</div>`;
 }
 function riskHtml(r){
   const e = r.econ, v = e.value;
