@@ -21,7 +21,21 @@ from models import price_ceiling
 
 
 def is_high_risk(cfg, brand):
-    return bool(brand and cfg["brands"].get(brand, {}).get("fake_risk"))
+    if not brand:
+        return False
+    if cfg["brands"].get(brand, {}).get("fake_risk"):
+        return True
+    # An AI-named brand such as "Rolex" or "TAG Heuer" rather than a config key.
+    return any(b.get("fake_risk") and name in brand for name, b in cfg["brands"].items())
+
+
+def needs_recheck(cfg, lst):
+    """Board rows worth another AI call: the check failed, or a fake-risk watch has no per-check scores yet."""
+    if check_failed(lst.ai):
+        return True
+    ai = lst.ai or {}
+    return bool(ai) and not ai.get("is_lot") and is_high_risk(cfg, lst.brand_hint or (ai.get("brand") or "").lower()) \
+        and not ai.get("auth_checks")
 
 
 def check_failed(ai):
@@ -107,7 +121,8 @@ def main():
         key = os.getenv("ANTHROPIC_API_KEY")
         if key:
             from vision import Vision
-            vision = Vision(key, cfg["ai"]["model"], cfg["ai"].get("max_images_per_listing", 4))
+            vision = Vision(key, cfg["ai"]["model"], cfg["ai"].get("max_images_per_listing", 4),
+                            cfg["economics"].get("fake_risk"))
         else:
             print("! AI skipped: set ANTHROPIC_API_KEY in .env")
 
@@ -149,7 +164,7 @@ def main():
     # Board rows whose check never finished (photos would not download, AI error) get another try first.
     if vision:
         for lst, _, _ in store.tracked(("active",)):
-            if budget <= 0 or not check_failed(lst.ai) or lst.source not in src_by_name:
+            if budget <= 0 or not needs_recheck(cfg, lst) or lst.source not in src_by_name:
                 continue
             print(f"  Re-check: {lst.title[:70]}")
             check(lst, src_by_name[lst.source])

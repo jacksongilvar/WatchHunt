@@ -53,6 +53,17 @@ Rolex, Tudor and Cartier are the most counterfeited brands. For them, be strict 
   sapphire or spinel cabochon on the crown; caseback with model and serial numbers; Must de Cartier is vermeil
   (gold-plated silver) and marked 925; Santos screws aligned and evenly finished; Roman numerals crisp and even.
 - When the photos do not show enough to check these, use "cannot_assess" and list exactly which shots to ask for.
+- For any brand in the authentication checklist below, fill auth_checks with one entry per listed check that
+  applies to this brand. These are counterfeit checks, not condition checks:
+  - "pass": the photos clearly show it, and it is what a genuine example of this model and era has.
+  - "fail": the photos clearly show something a genuine example would not have (wrong font, wrong calibre,
+    display caseback on a model that never had one, misaligned cyclops). Wear, rust, damage, missing lume or a
+    missing part is NOT a fail; it is condition. Mark that "unclear" or judge what is still visible, and put the
+    wear in condition_notes. A replaced part (service hands, aftermarket crown) is "unclear" with a note.
+  - "unclear": visible but not sharp, close or intact enough to judge either way.
+  - "not_shown": the photos do not include it, or the check does not apply to this model.
+  Judge each check on its own evidence. Do not let one doubt drag the other checks down.
+  A pass you cannot really see is worse than not_shown. Leave auth_checks empty for other brands.
 
 JSON schema:
 {
@@ -65,7 +76,7 @@ JSON schema:
   "movement_type": "automatic" | "manual" | "quartz" | "unknown",
   "identification_confidence": "low" | "medium" | "high",
   "authenticity_concern": "none_visible" | "some" | "high" | "cannot_assess",
-  "authenticity_checks": [string],
+  "auth_checks": [{"id": string, "result": "pass" | "fail" | "unclear" | "not_shown", "note": string}],
   "visible_red_flags": [string],
   "condition_notes": string,
   "photo_quality": "poor" | "ok" | "good",
@@ -130,10 +141,20 @@ def _parse_json(text):
         return None
 
 
+def checklist_text(fake_risk_cfg):
+    """The authentication checklist from config, for the system prompt."""
+    checks = (fake_risk_cfg or {}).get("checks") or {}
+    brands = ", ".join(sorted((fake_risk_cfg or {}).get("base_rate", {})))
+    lines = [f"- {cid}: {c['ask']}" + (f" (only {', '.join(c['brands'])})" if c.get("brands") else "")
+             for cid, c in checks.items()]
+    return f"\n\nAuthentication checklist (brands: {brands}). Use these ids in auth_checks:\n" + "\n".join(lines)
+
+
 class Vision:
-    def __init__(self, api_key, model, max_images=4):
+    def __init__(self, api_key, model, max_images=4, fake_risk_cfg=None):
         self.client = anthropic.Anthropic(api_key=api_key)
         self.model, self.max_images = model, max_images
+        self.system = SYSTEM + checklist_text(fake_risk_cfg)
 
     def analyze(self, listing: Listing, hints: str = "", max_images=None):
         why = []
@@ -157,7 +178,7 @@ class Vision:
             msg = self.client.messages.create(
                 model=self.model,
                 max_tokens=3000,
-                system=SYSTEM,
+                system=self.system,
                 messages=[{"role": "user", "content": blocks + [{"type": "text", "text": text}]}],
             )
         except anthropic.APIError as e:

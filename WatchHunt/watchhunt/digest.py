@@ -38,7 +38,8 @@ def _card(lst):
         ident = " ".join(x for x in [ai.get("brand"), ai.get("model"), ai.get("reference_guess")] if x) or "Unidentified"
         flags = "".join(f"<li>{_e(f)}</li>" for f in ai.get("visible_red_flags", []) or [])
         qs = "".join(f"<li>{_e(x)}</li>" for x in ai.get("questions_for_seller", []) or [])
-        checks = "".join(f"<li>{_e(x)}</li>" for x in ai.get("authenticity_checks", []) or [])
+        checks = "".join(f"<li>{_e(x.get('id'))}: {_e(x.get('result'))}{' (' + _e(x.get('note')) + ')' if x.get('note') else ''}</li>"
+                         for x in ai.get("auth_checks", []) or [] if isinstance(x, dict))
         val = ai.get("rough_value_range_usd")
         val_txt = f"${val[0]:,.0f} to ${val[1]:,.0f} (AI guess, verify with sold comps)" \
             if isinstance(val, list) and len(val) == 2 and all(isinstance(v, (int, float)) for v in val) else "n/a"

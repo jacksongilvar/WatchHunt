@@ -64,7 +64,7 @@ def build_board(store, cfg):
             "lens_guess": (lst.lens or {}).get("best_guess"),
             "replicas": {"count": (lst.lens or {}).get("replica_count", 0), "share": (lst.lens or {}).get("replica_share", 0),
                          "examples": (lst.lens or {}).get("replica_examples", [])},
-            "checks": ai.get("authenticity_checks", []) if ai else [],
+            "is_lot": bool(ai.get("is_lot")) if ai else False,
             "questions": ai.get("questions_for_seller", []) if ai else [],
             "history": store.history(lst.key),
         })

@@ -181,20 +181,20 @@ brands:
   # max_price raises the $ ceiling for this brand. fake_risk turns on the counterfeit adjustment in economics.
   rolex:            {tier: 3, max_price: 1500, fake_risk: true, also: [oyster perpetual, datejust, submariner, oysterdate, air king, air-king, gmt master], misspellings: [rollex, rolx, rolax, roelx, rollx, rolexx, rollax]}
   cartier:          {tier: 3, max_price: 1500, fake_risk: true, also: [tank louis, tank francaise, tank solo, must de cartier, santos, panthere, ballon bleu, pasha], misspellings: [cartie, catier, cartiere, cartiar, carteir]}
-  patek philippe:   {tier: 3, also: [patek], misspellings: [patek phillipe, patek philip, patek phillip]}
-  audemars piguet:  {tier: 3, also: [audemars], misspellings: [audemar]}
+  patek philippe:   {tier: 3, fake_risk: true, also: [patek], misspellings: [patek phillipe, patek philip, patek phillip]}
+  audemars piguet:  {tier: 3, fake_risk: true, also: [audemars], misspellings: [audemar]}
   vacheron:         {tier: 3, also: [vacheron constantin], misspellings: [vacheron constantine]}
   jaeger lecoultre: {tier: 3, also: [lecoultre, le coultre, jaeger le coultre], misspellings: [jagger lecoultre, le coulter]}
   universal geneve: {tier: 3, also: [], misspellings: [universal geneva]}
   heuer:            {tier: 3, also: [], misspellings: [hueur, huer, hauer]}
-  iwc:              {tier: 3, also: [schaffhausen], misspellings: []}
-  omega:            {tier: 2, also: [seamaster, speedmaster, constellation, de ville], misspellings: [omeaga, omgea, omege, seamster]}
+  iwc:              {tier: 3, fake_risk: true, also: [schaffhausen], misspellings: []}
+  omega:            {tier: 2, fake_risk: true, also: [seamaster, speedmaster, constellation, de ville], misspellings: [omeaga, omgea, omege, seamster]}
   tudor:            {tier: 2, max_price: 1500, fake_risk: true, also: [tudor prince, oysterdate tudor, black bay, tudor ranger, tudor submariner], misspellings: [tudur, tuder, tudar]}
-  breitling:        {tier: 2, also: [navitimer], misspellings: [brietling, brightling, breitlng]}
+  breitling:        {tier: 2, fake_risk: true, also: [navitimer], misspellings: [brietling, brightling, breitlng]}
   longines:         {tier: 2, also: [], misspellings: [longine, longenes, longins]}
   zenith:           {tier: 2, also: [el primero], misspellings: []}
   grand seiko:      {tier: 2, also: [], misspellings: []}
-  tag heuer:        {tier: 2, also: [], misspellings: [tag hauer, tag huer]}
+  tag heuer:        {tier: 2, fake_risk: true, also: [], misspellings: [tag hauer, tag huer]}
   seiko:            {tier: 1, also: [], misspellings: [sieko, seico, seko, seikko]}
   hamilton:         {tier: 1, also: [], misspellings: [hamiltion]}
   bulova:           {tier: 1, also: [accutron], misspellings: [bulvoa, bolova]}
@@ -216,16 +216,47 @@ economics:
   buyer_premium_pct: {ebay: 0, shopgoodwill: 0, propertyroom: 0}   # check each site's current terms
   service_cost: {automatic: 350, manual: 300, quartz: 60, unknown: 250}
   min_comps: 5             # sold results needed before sold data outranks everything else
-  # Counterfeit adjustment for brands with fake_risk: true (Rolex, Cartier, Tudor).
-  # Value becomes: chance genuine x genuine value + (1 - chance) x fake_value.
-  # The chance comes from the AI's red-flag read and Google Lens replica matches. Photos cannot prove genuine,
-  # so even "no visible red flags" is well short of 1. Authentication cost is added to your all-in cost.
+  # Counterfeit risk, for brands with fake_risk: true.
+  # Chance genuine starts at the brand's base rate, then each piece of evidence multiplies the odds:
+  #   pass: 5    -> seen 5 times more often on genuine watches than fakes (strong evidence it is genuine)
+  #   fail: 0.1  -> seen 10 times more often on fakes (strong evidence it is fake)
+  #   unclear or not shown -> no change. Missing evidence does not move the number either way.
+  # These weights are expert estimates, not measured data. Tune them as you get watches authenticated.
+  # Value = chance x genuine value + (1 - chance) x fake_value. The authentication cost is added to all-in.
   fake_risk:
-    genuine_chance: {none_visible: 0.6, some: 0.2, cannot_assess: 0.3, high: 0.02}
-    replica_share_threshold: 0.3 # replicas copy real models, so only a large share of replica Lens matches counts
-    replica_match_penalty: 0.5   # multiply the chance by this when that share is reached
-    fake_value: 25               # what a fake sells for (often nothing; selling one knowingly is illegal)
-    authentication_cost: {rolex: 150, cartier: 120, tudor: 120}
+    # Rough share of genuine pieces among cheap, non-specialist listings (Goodwill, police auctions, vague eBay).
+    base_rate: {rolex: 0.25, cartier: 0.3, tudor: 0.35, omega: 0.5, breitling: 0.45, tag heuer: 0.55,
+                patek philippe: 0.08, audemars piguet: 0.08, iwc: 0.5}
+    max_chance: 0.9      # photos alone never make it certain
+    min_chance: 0.01
+    checks:              # brands: limits a check to those brands
+      movement:         {ask: "Movement shown and the correct signed calibre for this model and era", pass: 5, fail: 0.05}
+      caseback:         {ask: "Caseback type, engravings and markings correct for the model (plain on most Rolex)", pass: 1.5, fail: 0.1}
+      serial:           {ask: "Serial and reference engraved in the right place and consistent with the model and era", pass: 2.5, fail: 0.15}
+      dial_print:       {ask: "Dial print crisp, evenly spaced, correct fonts, no bleed", pass: 1.5, fail: 0.2}
+      logo:             {ask: "Logo shape, size and position correct", pass: 1.3, fail: 0.15}
+      hands_markers:    {ask: "Hands and markers correct for the reference, lume consistent", pass: 1.2, fail: 0.35}
+      case_finish:      {ask: "Case shape, lug proportions, finishing and crown correct", pass: 1.3, fail: 0.25}
+      bracelet_clasp:   {ask: "Bracelet, end links and clasp correct for the model, with correct stamps", pass: 1.4, fail: 0.3}
+      photos_original:  {ask: "Photos are the seller's own, not stock or lifted from other listings", pass: 1.2, fail: 0.4}
+      cyclops:          {brands: [rolex, tudor], ask: "Date magnifier about 2.5x and centred over the date (not_shown if no date)", pass: 1.5, fail: 0.15}
+      rehaut:           {brands: [rolex], ask: "Rehaut engraving present and correct on post-2007 models, absent on older ones", pass: 1.5, fail: 0.2}
+      secret_signature: {brands: [cartier], ask: "Secret signature in the VII or X on models that have one", pass: 3, fail: 0.3}
+      cabochon_crown:   {brands: [cartier], ask: "Crown cabochon present and correct for the model", pass: 1.2, fail: 0.4}
+      blued_hands:      {brands: [cartier], ask: "Blued steel sword hands on models that have them", pass: 1.2, fail: 0.4}
+      rolex_parts:      {brands: [tudor], ask: "Vintage Tudor: Rolex-signed case, crown or caseback where correct for the era", pass: 2, fail: 0.4}
+    # A fixed (buy now) price far below genuine value is a fake pattern. Auction bids are not: they always start low.
+    buy_now_price:
+      - {below: 0.15, weight: 0.3}   # under 15% of the low genuine value
+      - {below: 0.35, weight: 0.6}
+    replica_share_threshold: 0.3     # replicas copy real models, so only a large share of replica Lens matches counts
+    replica_weight: 0.5
+    # Rows checked before per-check scoring existed fall back to the overall concern level.
+    fallback_by_concern: {none_visible: 0.6, some: 0.2, cannot_assess: 0.3, high: 0.02}
+    fake_value: 25                   # what a fake sells for (often nothing; selling one knowingly is illegal)
+    authentication_cost: {rolex: 150, cartier: 120, tudor: 120, omega: 100, breitling: 100, tag heuer: 80,
+                          patek philippe: 250, audemars piguet: 250, iwc: 100}
   lens:
     min_prices: 4          # priced Lens matches needed before market data outranks the AI guess
     asking_discount: 0.8   # asking prices run above what watches actually sell for; value = asking x this
+    condition_gap: 2.0     # if Lens value is over 2x the AI's as-is high estimate, Lens matched better-condition pieces

@@ -67,6 +67,8 @@ main{max-width:var(--wrap);margin:0 auto;padding:0 20px 60px}
 .gauge .band.ai{border-style:dashed}
 .gauge .band.market{border-style:dotted}
 .risk{color:var(--oxblood)}
+.steps{margin:4px 0 0;padding-left:20px}
+.steps li{margin-bottom:3px}
 .gauge .mid{position:absolute;top:8px;width:1px;height:18px;background:var(--brass)}
 .gauge .needle{position:absolute;top:2px;width:2px;height:30px;border-radius:1px;transform:translateX(-1px)}
 .gauge .needle::after{content:"";position:absolute;left:-3px;bottom:-2px;width:8px;height:8px;border-radius:50%;background:inherit}
@@ -190,20 +192,31 @@ const BASIS = {sold: "sold data", market: "Lens market", ai: "AI guess"};
 function marketHtml(r){
   const m = r.market;
   if (!m) return "";
+  if (m.condition_mismatch) return `<div><b>Google Lens asking prices</b><div>${m.count} matches around ${money(m.median)}, but they are better-condition examples than this one, so the AI's as-is value is used.</div></div>`;
   if (m.skipped === "lot") return `<div><b>Google Lens</b><div>Multi-watch lot, so Lens prices are not used. Value is the AI estimate for the whole lot.</div></div>`;
   if (!m.count) return `<div><b>Google Lens</b><div>${r.lens_guess ? "Best guess: " + esc(r.lens_guess) + ". " : ""}No priced matches for this model.</div></div>`;
   return `<div><b>Google Lens asking prices</b><div>${m.count} secondhand ${m.match_level === "reference" ? "exact-reference" : "brand + model"} matches, median ${money(m.median)}, ${money(m.low)} to ${money(m.high)}.</div>
     <ul>${(m.examples || []).map(x => `<li><a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.title)}</a> ${esc(x.source)} ${money(x.price)}</li>`).join("")}</ul></div>`;
 }
+const pct100 = p => Math.round(p * 100) + "%";
+function genuineTag(r){
+  const e = r.econ;
+  if (e.fake_risk && e.genuine_chance != null) {
+    const cls = e.genuine_chance >= 0.6 ? "pos" : e.genuine_chance >= 0.3 ? "" : "risk";
+    return `<div class="small ${cls}">${pct100(e.genuine_chance)} genuine</div>`;
+  }
+  if (r.concern && !r.is_lot) return `<div class="small">rarely faked</div>`;
+  return "";
+}
 function riskHtml(r){
   const e = r.econ, v = e.value;
-  if (!e.fake_risk) return "";
-  const rep = r.replicas || {};
-  return `<div><b>Counterfeit risk</b><div>${e.genuine_chance != null
-      ? `Valued at a ${Math.round(e.genuine_chance * 100)}% chance it is genuine${v && v.genuine_low != null ? ` (${money(v.genuine_low)} to ${money(v.genuine_high)} if genuine)` : ""}.`
-      : "Not checked yet."} Cost includes ${money(e.auth_cost)} to authenticate before you resell.
-    ${rep.count ? ` Google Lens: ${rep.count} replica or clone listings among the matches (${Math.round(rep.share * 100)}%).` : ""}</div>
-    ${r.checks && r.checks.length ? `<ul>${r.checks.map(c => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}
+  if (!e.fake_risk) return r.concern && !r.is_lot ? `<div><b>Counterfeit risk</b><div>Low: this brand is rarely counterfeited, so no adjustment is made. Red flags above still apply.</div></div>` : "";
+  const rep = r.replicas || {}, steps = e.genuine_steps || [];
+  const stepHtml = steps.map(s => `<li>${esc(s.label)}${s.weight != null ? ` <span class="small">×${s.weight}</span>` : ""} → <b>${pct100(s.chance)}</b>${s.note ? `<div class="small">${esc(s.note)}</div>` : ""}</li>`).join("");
+  return `<div><b>Counterfeit risk: ${e.genuine_chance != null ? pct100(e.genuine_chance) + " chance genuine" : "not checked yet"}</b>
+    <div>${v && v.genuine_low != null ? `Worth ${money(v.genuine_low)} to ${money(v.genuine_high)} if genuine. ` : ""}Cost includes ${money(e.auth_cost)} to authenticate before you resell.</div>
+    ${stepHtml ? `<div style="margin-top:6px">How the chance was worked out:</div><ol class="steps">${stepHtml}</ol>` : ""}
+    ${rep.count && !(rep.share >= 0.3) ? `<div class="small">Google Lens: ${rep.count} replica listings among the matches (${pct100(rep.share)}), too few to count.</div>` : ""}
     ${r.questions && r.questions.length ? `<div>Ask the seller:</div><ul>${r.questions.map(q => `<li>${esc(q)}</li>`).join("")}</ul>` : ""}</div>`;
 }
 function row(r){
@@ -218,7 +231,7 @@ function row(r){
       <div class="sub"><span class="concern" style="background:${cc}" title="${cl}"></span>${esc(r.source)}${r.reference ? " " + esc(r.reference) : ""}${r.era ? ", " + esc(r.era) : ""}</div></div></div>
     <div class="c-price num"><div class="fig${flashed}">${money(r.price)}</div><div class="small">${r.bids != null ? r.bids + " bids" : "buy now"}</div></div>
     <div class="c-ends num"><div class="fig" data-left="${esc(r.key)}">${r.status === "ended" ? "Ended" : fmtLeft(h)}</div></div>
-    <div class="c-value num"><div class="fig">${v ? money(v.mid) : "–"}</div><div class="small">${v ? BASIS[v.basis] || v.basis : ""}</div>${e.fake_risk && e.genuine_chance != null ? `<div class="small risk">${Math.round(e.genuine_chance * 100)}% genuine</div>` : ""}</div>
+    <div class="c-value num"><div class="fig">${v ? money(v.mid) : "–"}</div><div class="small">${v ? BASIS[v.basis] || v.basis : ""}</div>${genuineTag(r)}</div>
     <div class="c-gauge">${gauge(r)}</div>
     <div class="c-net num"><div class="small ml">Net at mid</div><div class="fig ${netCls}">${money(e.net_mid)}</div><div class="small">${e.margin_pct != null ? e.margin_pct + "%" : ""}</div></div>
     <div class="c-max num"><div class="small ml">Max bid</div><div class="fig ${under ? "pos" : ""}">${e.max_bid === 0 ? "Pass" : money(e.max_bid)}</div><div class="small">${e.max_bid === 0 ? "too thin" : under ? "price is under" : e.max_bid != null ? "price is over" : ""}</div></div>
@@ -240,7 +253,8 @@ function render(){
   let rows = data.rows.filter(r => !hid.has(r.key) && (filter === "ended" ? r.status === "ended" : r.status === "active"));
   if (filter === "soon") rows = rows.filter(r => { const h = hoursLeft(r); return h != null && h < 24; });
   if (filter === "clears") rows = rows.filter(r => r.econ.max_bid != null && r.price <= r.econ.max_bid);
-  if ($("#hideHigh").checked) rows = rows.filter(r => r.concern !== "high");
+  // High fake risk: the AI's overall call is high concern, or the evidence puts it under 10% genuine.
+  if ($("#hideHigh").checked) rows = rows.filter(r => r.concern !== "high" && !(r.econ.genuine_chance != null && r.econ.genuine_chance < 0.1));
   rows.sort(sort === "ending"
     ? (a,b) => (hoursLeft(a) ?? 1e9) - (hoursLeft(b) ?? 1e9)
     : (a,b) => (b.econ.margin_pct ?? -1e9) - (a.econ.margin_pct ?? -1e9));
