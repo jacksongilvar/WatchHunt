@@ -284,9 +284,52 @@ function setupRefresh(){
   if (LOCAL){
     btn.addEventListener("click", async () => { await fetch("/api/refresh",{method:"POST"}); $("#status").textContent = "Checking bids now."; setTimeout(load, 4000); });
   } else if (data.actions_url){
-    btn.textContent = "Run now on GitHub";
-    btn.addEventListener("click", () => window.open(data.actions_url, "_blank", "noopener"));
+    btn.textContent = "↻ Check bids now";
+    btn.title = "Re-checks prices and bids on GitHub, then reloads the board (about 3 minutes). Shift-click to forget your saved key.";
+    btn.addEventListener("click", ev => ghRefresh(btn, ev.shiftKey));
   } else { btn.style.display = "none"; }
+}
+// Static (GitHub Pages) refresh: starts the workflow with a GitHub token kept only in this browser.
+const TOKEN_KEY = "wh_gh_token";
+function getStored(){ try { return localStorage.getItem(TOKEN_KEY); } catch(e){ return null; } }
+function setStored(v){ try { v ? localStorage.setItem(TOKEN_KEY, v) : localStorage.removeItem(TOKEN_KEY); } catch(e){} }
+async function ghRefresh(btn, forget){
+  if (forget){ setStored(null); $("#status").textContent = "Saved GitHub key removed from this browser."; return; }
+  const m = (data.actions_url || "").match(/github\.com\/([^/]+\/[^/]+)\/actions\/workflows\/([^/?#]+)/);
+  if (!m) { window.open(data.actions_url, "_blank", "noopener"); return; }
+  const [, repo, wf] = m;
+  let token = getStored();
+  if (!token){
+    token = (prompt("One-time setup: paste a GitHub fine-grained token for this repo with Actions: Read and write. It's saved only in this browser.") || "").trim();
+    if (!token) return;
+  }
+  btn.disabled = true;
+  const before = (data.state || {}).last_refresh;
+  try {
+    const r = await fetch(`https://api.github.com/repos/${repo}/actions/workflows/${wf}/dispatches`, {
+      method: "POST",
+      headers: {"Authorization": "Bearer " + token, "Accept": "application/vnd.github+json", "Content-Type": "application/json"},
+      body: JSON.stringify({ref: "main", inputs: {mode: "refresh"}})});
+    if (r.status === 401 || r.status === 403 || r.status === 404){
+      setStored(null); btn.disabled = false;
+      $("#status").textContent = "GitHub didn't accept that key (needs Actions: Read and write on this repo). Click again to paste a new one.";
+      return;
+    }
+    if (!r.ok) throw new Error("GitHub said " + r.status);
+    setStored(token);
+  } catch(e){
+    btn.disabled = false; $("#status").textContent = "Couldn't start the refresh: " + e.message; return;
+  }
+  const started = Date.now();
+  $("#status").textContent = "Checking bids on GitHub. The board reloads itself when it's done, usually in about 3 minutes.";
+  const poll = setInterval(async () => {
+    try {
+      const d = await (await fetch("board.json?t=" + Date.now(), {cache: "no-store"})).json();
+      if ((d.state || {}).last_refresh !== before){ clearInterval(poll); btn.disabled = false; load(); return; }
+    } catch(e){}
+    if (Date.now() - started > 10 * 60000){ clearInterval(poll); btn.disabled = false;
+      $("#status").textContent = "Still waiting on GitHub after 10 minutes. Check the Actions tab."; }
+  }, 20000);
 }
 setInterval(load, LOCAL ? 30000 : 300000);
 setInterval(() => document.querySelectorAll("[data-left]").forEach(el => {
