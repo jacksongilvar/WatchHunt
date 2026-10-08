@@ -17,10 +17,40 @@ def _ended_by_clock(lst):
         return False
 
 
+def add_watchlist(store, cfg, sources):
+    """Put hand-picked listings from config.yaml `watchlist` on the board. Returns how many were added."""
+    tracked = {lst.key for lst, _, _ in store.tracked(("active", "ended"))}
+    added = 0
+    for item in cfg.get("watchlist") or []:
+        if isinstance(item, (int, str)):
+            item = {"id": item}
+        source = item.get("source", "shopgoodwill")
+        key = f"{source}:{item['id']}"
+        src = sources.get(source)
+        if key in tracked or not src or not hasattr(src, "get"):
+            continue
+        lst = src.get(item["id"])
+        if not lst:
+            continue
+        lst.reasons = ["Added by hand"]
+        if item.get("note"):
+            lst.reasons.append(str(item["note"]))
+        if item.get("max_bid"):
+            lst.reasons.append(f"Your max bid: ${item['max_bid']}")
+        store.track(lst)
+        added += 1
+        time.sleep(cfg["search"].get("polite_delay_seconds", 2))
+    store.commit()
+    return added
+
+
 def refresh_bids(store, cfg):
     """Re-check price and bids on every active watch on the board. Returns how many were checked."""
     from main import build_sources
     sources = {s.name: s for s in build_sources(cfg, {"ebay", "shopgoodwill", "propertyroom"}, False)}
+    added = add_watchlist(store, cfg, sources)
+    if added:
+        print(f"Added {added} watchlist items to the board.")
     checked = 0
     for lst, status, _ in store.tracked(("active", "ended")):
         if lst.source == "shopgoodwill":

@@ -160,6 +160,38 @@ class ShopGoodwillSource:
         return {"query": query, "count": len(prices), "median": round(statistics.median(prices), 2),
                 "p25": round(q[0], 2), "p75": round(q[2], 2), "low": prices[0], "high": prices[-1]}
 
+    def get(self, item_id):
+        """Build a Listing for one item id (used for the manual watchlist). Returns None if it can't be read."""
+        try:
+            r = requests.get(DETAIL_URL.format(item_id), headers=HEADERS, timeout=30)
+            r.raise_for_status()
+            d = r.json()
+        except (requests.RequestException, ValueError) as e:
+            print(f"  [shopgoodwill] watchlist item {item_id} failed: {e}")
+            return None
+        if not d.get("itemId"):
+            return None
+        lst = Listing(
+            source="shopgoodwill",
+            item_id=str(item_id),
+            title=d.get("title", ""),
+            url=f"https://shopgoodwill.com/item/{item_id}",
+            price=float(d.get("currentPrice") or d.get("minimumBid") or 0),
+            bids=d.get("numberOfBids"),
+            end_time=to_utc(d.get("endTime")),
+            buying_format="auction",
+            seller=str(d.get("sellerCompanyName") or ""),
+        )
+        ship = d.get("shippingPrice")
+        if ship and float(ship) > 0.01:
+            lst.shipping = float(ship) + float(d.get("handlingPrice") or 0)
+        desc = d.get("description") or ""
+        lst.description = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", desc)).strip()[:3000]
+        server = (d.get("imageServer") or "").rstrip("/")
+        paths = [p for p in (d.get("imageUrlString") or "").split(";") if p.strip()]
+        lst.image_urls = [f"{server}/{p.strip().lstrip('/')}".replace("\\", "/") if server else _img(p) for p in paths]
+        return lst
+
     def refresh(self, listing: Listing):
         """Update price and bids. Returns False once the auction has ended."""
         try:
