@@ -44,6 +44,7 @@ class Listing:
     comps: Optional[dict] = None
     lens: Optional[dict] = None     # Google Lens matches for the main photo
     market: Optional[dict] = None   # asking-price band from Lens matches
+    manual: Optional[dict] = None   # your own value range and service cost, from config.yaml watchlist
 
     @property
     def key(self) -> str:

@@ -66,6 +66,7 @@ main{max-width:var(--wrap);margin:0 auto;padding:0 20px 60px}
 .gauge .band{position:absolute;top:10px;height:14px;background:var(--brass-soft);border:1px solid var(--brass);border-radius:3px}
 .gauge .band.ai{border-style:dashed}
 .gauge .band.market{border-style:dotted}
+.gauge .band.manual{border-style:dashed}
 .risk{color:var(--oxblood)}
 .steps{margin:4px 0 0;padding-left:20px}
 .steps li{margin-bottom:3px}
@@ -188,7 +189,7 @@ function spark(hist){
   const pts = ps.map((p,i) => `${(i/(ps.length-1)*82+1).toFixed(1)},${(28 - (p-lo)/span*26).toFixed(1)}`).join(" ");
   return `<svg class="spark" viewBox="0 0 84 30" preserveAspectRatio="none" aria-label="Price history"><polyline fill="none" stroke="var(--brass)" stroke-width="1.5" vector-effect="non-scaling-stroke" points="${pts}"/></svg>`;
 }
-const BASIS = {sold: "sold data", market: "Lens market", ai: "AI guess"};
+const BASIS = {sold: "sold data", market: "Lens market", ai: "AI guess", manual: "your estimate"};
 function marketHtml(r){
   const m = r.market;
   if (!m) return "";
@@ -206,6 +207,7 @@ function genuineTag(r){
     return `<div class="small ${cls}">${pct100(e.genuine_chance)} genuine</div>`;
   }
   if (r.is_lot) return `<div class="small">mixed lot</div>`;
+  if (r.hand_picked) return `<div class="small">hand-picked</div>`;
   if (r.concern) return `<div class="small">rarely faked</div>`;
   return `<div class="small">not checked</div>`;
 }
@@ -235,14 +237,14 @@ function row(r){
     <div class="c-value num"><div class="fig">${v ? money(v.mid) : "–"}</div><div class="small">${v ? BASIS[v.basis] || v.basis : ""}</div>${genuineTag(r)}</div>
     <div class="c-gauge">${gauge(r)}</div>
     <div class="c-net num"><div class="small ml">Net at mid</div><div class="fig ${netCls}">${money(e.net_mid)}</div><div class="small">${e.margin_pct != null ? e.margin_pct + "%" : ""}</div></div>
-    <div class="c-max num"><div class="small ml">Max bid</div><div class="fig ${under ? "pos" : ""}">${e.max_bid === 0 ? "Pass" : money(e.max_bid)}</div><div class="small">${e.max_bid === 0 ? "too thin" : under ? "price is under" : e.max_bid != null ? "price is over" : ""}</div></div>
+    <div class="c-max num"><div class="small ml">Max bid</div><div class="fig ${under ? "pos" : ""}">${e.max_bid === 0 ? "Pass" : money(e.max_bid)}</div><div class="small">${e.max_bid === 0 ? "too thin" : under ? "price is under" : e.max_bid != null ? "price is over" : ""}</div>${r.your_max != null ? `<div class="small">yours ${money(r.your_max)}</div>` : ""}</div>
     <div class="c-spark">${spark(r.history)}</div>
   </summary>
   <div class="detail">
     <div><b>${esc(r.title)}</b><div>${esc(r.summary)}</div></div>
     <div><b>${cl}</b>${r.flags && r.flags.length ? `<ul>${r.flags.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}</div>
     <div><b>How the numbers work</b><div>All-in cost ${money(e.all_in)} includes ${money(e.service)} service,${e.auth_cost ? ` ${money(e.auth_cost)} authentication,` : ""} ${money(e.ship_in)} inbound shipping${e.ship_in_basis === "listing" ? " (from the listing)" : " (estimate)"}.
-      ${v ? `Value ${money(v.low)} to ${money(v.high)} from ${esc(v.basis_note)}. Max bid uses the low end.` : "Needs sold data or an AI estimate."}</div></div>
+      ${v ? `Value ${money(v.low)} to ${money(v.high)} from ${esc(v.basis_note)}. Max bid uses the low end.` : "Needs sold data, an AI estimate, or a value in your watchlist entry."}</div></div>
     ${riskHtml(r)}
     ${marketHtml(r)}
     <div class="actions"><a class="btn" href="${esc(r.url)}" target="_blank" rel="noopener">Open listing</a>

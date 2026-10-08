@@ -32,11 +32,13 @@ def add_watchlist(store, cfg, sources):
         if item.get("max_bid"):
             reasons.append(f"Your max bid: ${item['max_bid']}")
         ship = item.get("shipping")
+        manual = {k: item[k] for k in ("value", "service", "basis", "max_bid") if item.get(k) is not None} or None
         if key in tracked:  # already on the board: keep note, max bid and shipping in sync with config
             lst, status = tracked[key]
-            if lst.reasons and lst.reasons[0] == "Added by hand" and (lst.reasons != reasons or
+            if lst.reasons and lst.reasons[0] == "Added by hand" and (lst.reasons != reasons or lst.manual != manual or
                                                                       (ship is not None and lst.shipping != float(ship))):
                 lst.reasons = reasons
+                lst.manual = manual
                 if ship is not None:
                     lst.shipping = float(ship)
                 store.update_tracked(lst, status)
@@ -48,6 +50,7 @@ def add_watchlist(store, cfg, sources):
         if not lst:
             continue
         lst.reasons = reasons
+        lst.manual = manual
         if ship is not None:
             lst.shipping = float(ship)
         store.track(lst)
@@ -108,6 +111,8 @@ def build_board(store, cfg):
             "replicas": {"count": (lst.lens or {}).get("replica_count", 0), "share": (lst.lens or {}).get("replica_share", 0),
                          "examples": (lst.lens or {}).get("replica_examples", [])},
             "is_lot": bool(ai.get("is_lot")) if ai else False,
+            "hand_picked": bool(lst.reasons and lst.reasons[0] == "Added by hand"),
+            "your_max": (lst.manual or {}).get("max_bid"),
             "questions": ai.get("questions_for_seller", []) if ai else [],
             "history": store.history(lst.key),
         })

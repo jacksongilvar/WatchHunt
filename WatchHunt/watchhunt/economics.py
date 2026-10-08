@@ -17,6 +17,12 @@ The chance starts at the brand's base rate and moves with each authentication ch
 
 
 def value_band(lst, econ):
+    man = lst.manual or {}
+    v = man.get("value")
+    if isinstance(v, list) and len(v) == 2 and all(isinstance(x, (int, float)) for x in v) and max(v) > 0:
+        lo, hi = sorted(v)
+        return {"low": lo, "mid": (lo + hi) / 2, "high": hi, "basis": "manual",
+                "basis_note": man.get("basis") or "your estimate, unverified"}
     ai = lst.ai or {}
     # Sold comps and Lens prices describe one watch, not a mixed lot, so lots use the AI's whole-lot range.
     c = {} if ai.get("is_lot") else (lst.comps or {})
@@ -119,6 +125,8 @@ def numbers(lst, econ, brands=None):
     prem = econ.get("buyer_premium_pct", {}).get(lst.source, 0) / 100
     movement = (lst.ai or {}).get("movement_type", "unknown") or "unknown"
     service = econ.get("service_cost", {}).get(movement, econ.get("service_cost", {}).get("unknown", 250))
+    if (lst.manual or {}).get("service") is not None:
+        service = lst.manual["service"]
     ship_in = lst.shipping if lst.shipping is not None else econ.get("ship_in", 0)
     fr = econ.get("fake_risk", {})
     risky = risky_brand(lst, brands)
