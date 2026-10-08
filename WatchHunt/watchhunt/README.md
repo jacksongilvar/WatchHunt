@@ -55,7 +55,7 @@ Each row shows:
   The board labels which one it used. Lens matches also go into the Claude prompt, so identification is better even when there are no prices.
 - **Cost vs value gauge:** the brass band is the value range. The needle is your all-in cost: price plus inbound shipping (the listing's stated shipping on eBay when it has one, otherwise `ship_in`) plus a service estimate. A green needle clears your target margin, brass is profitable but thin, and red loses money at the low estimate.
 - **Rolex, Cartier and Tudor (fake risk):** these are searched up to $1,500 (`brands.<name>.max_price`) and checked first, with up to 8 photos. Claude runs a brand-specific counterfeit checklist (cyclops, rehaut, casebacks, Cartier secret signature and so on). Their value is risk-adjusted: chance genuine x genuine value + chance fake x `fake_value`. The chance comes from Claude's red-flag read (`economics.fake_risk.genuine_chance`) and drops further when a large share of Google Lens matches are replica listings. An authentication fee is added to all-in cost. The board shows the percentage and the checks. Nothing here can prove a watch genuine; authenticate before reselling, and never resell a watch you suspect is fake.
-- **Net at mid:** profit if it sells at the middle of the value range, after selling fees and shipping out.
+- **Profit:** "likely" is what you'd make if it sells mid-range, "worst" is what you'd make if it sells at the low end. Both are after selling fees, shipping and repairs.
 - **Max bid:** the highest price that still clears your target margin at the LOW value estimate. "Pass" means no price does.
 
 To open it from your phone on the same wifi, set `dashboard.host` to `0.0.0.0` in config.yaml and visit your Mac's local IP on port 8000.

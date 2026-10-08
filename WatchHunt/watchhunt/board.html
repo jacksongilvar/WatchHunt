@@ -12,7 +12,7 @@
   --brass:#c2a466; --brass-soft:rgba(194,164,102,.28); --lume:#86cdbd; --oxblood:#c9634b;
   --figures:"Barlow Condensed","Arial Narrow",sans-serif; --text:"Barlow","Helvetica Neue",Arial,sans-serif;
   --wrap:1240px; --thumb:48px; --fig:20px; --base:15px;
-  --cols:minmax(220px,2.2fr) 90px 92px 118px minmax(180px,1.6fr) 96px 92px 84px;
+  --cols:minmax(220px,2.2fr) 90px 92px 118px minmax(180px,1.6fr) 96px 92px;
 }
 @media (prefers-color-scheme: light){
   :root{--dial:#f1f2ee; --dial-2:#e4e7e2; --steel:#17243a; --muted:#5c6a80; --rule:#cfd4cc;
@@ -75,7 +75,6 @@ main{max-width:var(--wrap);margin:0 auto;padding:0 20px 60px}
 .gauge .needle::after{content:"";position:absolute;left:-3px;bottom:-2px;width:8px;height:8px;border-radius:50%;background:inherit}
 .gauge .none{position:absolute;top:8px;font-size:12px;color:var(--muted)}
 
-.spark{width:84px;height:30px;display:block;margin-left:auto}
 .detail{padding:4px 12px 18px calc(var(--thumb) + 24px);display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px 32px;color:var(--muted);font-size:14px}
 .detail b{color:var(--steel);font-weight:500}
 .detail ul{margin:4px 0 0;padding-left:18px}
@@ -91,31 +90,28 @@ main{max-width:var(--wrap);margin:0 auto;padding:0 20px 60px}
   .controls .seg{max-width:100%;overflow-x:auto}
   .c-watch{grid-area:w}.c-price{grid-area:p;text-align:left}.c-ends{grid-area:e;text-align:right}
   .c-gauge{grid-area:g}.c-net{grid-area:n;text-align:left}.c-max{grid-area:m}
-  .c-value,.c-spark{display:none}
+  .c-value{display:none}
   .detail{padding-left:12px}
   h1{font-size:36px}
 }
 /* Bigger monitors: use the width. The gauge and the watch name get most of the extra room. */
 @media (min-width:1500px){
   :root{--wrap:1480px; --thumb:56px; --fig:22px; --base:16px;
-        --cols:minmax(280px,2.4fr) 104px 104px 132px minmax(260px,2fr) 112px 104px 110px}
+        --cols:minmax(280px,2.4fr) 104px 104px 132px minmax(260px,2fr) 112px 104px}
   h1{font-size:52px}
-  .spark{width:110px;height:34px}
-  .gauge{height:38px}
+    .gauge{height:38px}
 }
 @media (min-width:1900px){
   :root{--wrap:1840px; --thumb:64px; --fig:24px; --base:17px;
-        --cols:minmax(340px,2.6fr) 116px 116px 148px minmax(360px,2.4fr) 124px 116px 140px}
+        --cols:minmax(340px,2.6fr) 116px 116px 148px minmax(360px,2.4fr) 124px 116px}
   h1{font-size:58px}
-  .spark{width:140px;height:38px}
-  .detail{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+    .detail{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
 }
 @media (min-width:2500px){
   :root{--wrap:2360px; --thumb:72px; --fig:26px; --base:18px;
-        --cols:minmax(420px,2.8fr) 130px 130px 164px minmax(480px,2.8fr) 140px 130px 170px}
+        --cols:minmax(420px,2.8fr) 130px 130px 164px minmax(480px,2.8fr) 140px 130px}
   h1{font-size:64px}
-  .spark{width:170px;height:42px}
-}
+  }
 @media (prefers-reduced-motion: reduce){.flash{animation:none}}
 </style>
 </head>
@@ -144,7 +140,7 @@ main{max-width:var(--wrap);margin:0 auto;padding:0 20px 60px}
 <main>
   <div class="head" aria-hidden="true">
     <div>Watch</div><div class="num">Price</div><div class="num">Ends</div><div class="num">Value</div>
-    <div>Cost vs value</div><div class="num">Net at mid</div><div class="num">Max bid</div><div class="num">Trend</div>
+    <div>Cost vs value</div><div class="num">Profit</div><div class="num">Max bid</div>
   </div>
   <div id="rows"></div>
 </main>
@@ -182,12 +178,6 @@ function gauge(r){
     <div class="band ${v.basis}" style="left:${pct(v.low)};width:calc(${pct(v.high)} - ${pct(v.low)})"></div>
     <div class="mid" style="left:${pct(v.mid)}"></div>
     <div class="needle" style="left:${pct(e.all_in)};background:${color}"></div></div>`;
-}
-function spark(hist){
-  if (!hist || hist.length < 2) return `<span class="small">–</span>`;
-  const ps = hist.map(h => h.price), lo = Math.min(...ps), hi = Math.max(...ps), span = hi - lo || 1;
-  const pts = ps.map((p,i) => `${(i/(ps.length-1)*82+1).toFixed(1)},${(28 - (p-lo)/span*26).toFixed(1)}`).join(" ");
-  return `<svg class="spark" viewBox="0 0 84 30" preserveAspectRatio="none" aria-label="Price history"><polyline fill="none" stroke="var(--brass)" stroke-width="1.5" vector-effect="non-scaling-stroke" points="${pts}"/></svg>`;
 }
 const BASIS = {sold: "sold data", market: "Lens market", ai: "AI guess", manual: "your estimate"};
 function marketHtml(r){
@@ -236,9 +226,8 @@ function row(r){
     <div class="c-ends num"><div class="fig" data-left="${esc(r.key)}">${r.status === "ended" ? "Ended" : fmtLeft(h)}</div></div>
     <div class="c-value num"><div class="fig">${v ? money(v.mid) : "–"}</div><div class="small">${v ? BASIS[v.basis] || v.basis : ""}</div>${genuineTag(r)}</div>
     <div class="c-gauge">${gauge(r)}</div>
-    <div class="c-net num"><div class="small ml">Net at mid</div><div class="fig ${netCls}">${money(e.net_mid)}</div><div class="small">${e.margin_pct != null ? e.margin_pct + "%" : ""}</div></div>
+    <div class="c-net num" title="Likely: profit if it sells mid-range, after fees, shipping and repairs. Worst case: profit if it sells at the low end."><div class="small ml">Profit</div><div class="fig ${netCls}">${e.net_mid == null ? "–" : money(e.net_mid)}</div><div class="small">${e.net_mid == null ? "" : "likely"}</div>${e.net_low != null ? `<div class="small ${e.net_low >= 0 ? "pos" : "neg"}">worst ${money(e.net_low)}</div>` : ""}</div>
     <div class="c-max num"><div class="small ml">Max bid</div><div class="fig ${under ? "pos" : ""}">${e.max_bid === 0 ? "Pass" : money(e.max_bid)}</div><div class="small">${e.max_bid === 0 ? "too thin" : under ? "price is under" : e.max_bid != null ? "price is over" : ""}</div>${r.your_max != null ? `<div class="small">yours ${money(r.your_max)}</div>` : ""}</div>
-    <div class="c-spark">${spark(r.history)}</div>
   </summary>
   <div class="detail">
     <div><b>${esc(r.title)}</b><div>${esc(r.summary)}</div></div>
