@@ -32,6 +32,11 @@ h1{font:600 44px/1 var(--figures);letter-spacing:.01em;margin:0}
 .btn{border:1px solid var(--rule);border-radius:999px;white-space:nowrap;text-decoration:none;display:inline-block}
 .seg button{white-space:nowrap}
 .ml{display:none}
+.cnt{margin-left:6px;font-size:12px;opacity:.75}
+.badge-new{display:inline-block;margin-right:6px;padding:0 6px;border-radius:999px;background:var(--lume);color:#0b1220;font-size:11px;font-weight:700;vertical-align:2px}
+.star{background:none;border:0;padding:0 6px 0 0;font-size:18px;line-height:1;cursor:pointer;color:var(--muted)}
+.star.on{color:var(--brass)}
+.row.bidding{box-shadow:inset 3px 0 0 var(--brass)}
 .btn:hover,.seg button:hover{color:var(--steel)}
 button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 .spacer{flex:1}
@@ -124,6 +129,8 @@ main{max-width:var(--wrap);margin:0 auto;padding:0 20px 60px}
 <div class="controls">
   <div class="seg" role="group" aria-label="Filter">
     <button data-f="all" aria-pressed="true">All live</button>
+    <button data-f="new" aria-pressed="false">New<span class="cnt" id="cntNew"></span></button>
+    <button data-f="bidding" aria-pressed="false">★ Bidding<span class="cnt" id="cntBid"></span></button>
     <button data-f="soon" aria-pressed="false">Ending in 24h</button>
     <button data-f="clears" aria-pressed="false">Under max bid</button>
     <button data-f="ended" aria-pressed="false">Ended</button>
@@ -133,6 +140,7 @@ main{max-width:var(--wrap);margin:0 auto;padding:0 20px 60px}
     <button data-s="ending" aria-pressed="false">Ending soonest</button>
   </div>
   <label class="small"><input type="checkbox" id="hideHigh" checked> Hide high fake risk</label>
+  <button class="btn" id="markSeen" hidden>Mark all seen</button>
   <span class="spacer"></span>
   <button class="btn" id="refresh">Check bids now</button>
 </div>
@@ -153,7 +161,11 @@ const CONCERN = {none_visible:["var(--lume)","No visible red flags (not proof)"]
                  high:["var(--oxblood)","High fake risk"], cannot_assess:["var(--muted)","Photos too poor to judge"]};
 let data = {rows:[]}, filter = "all", sort = "margin", prevPrice = {}, openKeys = new Set();
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
-const HIDDEN_KEY = "wh-hidden";
+const HIDDEN_KEY = "wh-hidden", SEEN_KEY = "wh-seen", BID_KEY = "wh-bidding";
+function getSet(k){ try { return new Set(JSON.parse(localStorage.getItem(k) || "[]")); } catch(e){ return new Set(); } }
+function putSet(k, set){ try { localStorage.setItem(k, JSON.stringify([...set])); } catch(e){} }
+function markSeen(keys){ const s = getSet(SEEN_KEY); keys.forEach(k => s.add(k)); putSet(SEEN_KEY, s); }
+function toggleBid(key){ const b = getSet(BID_KEY); b.has(key) ? b.delete(key) : (b.add(key), markSeen([key])); putSet(BID_KEY, b); }
 function hidden(){ try { return new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) || "[]")); } catch(e){ return new Set(); } }
 function hide(key){ try { const h = hidden(); h.add(key); localStorage.setItem(HIDDEN_KEY, JSON.stringify([...h])); } catch(e){} }
 
@@ -217,10 +229,11 @@ function row(r){
   const flashed = prevPrice[r.key] != null && prevPrice[r.key] !== r.price ? " flash" : "";
   const netCls = e.net_mid == null ? "" : e.net_mid >= 0 ? "pos" : "neg";
   const under = e.max_bid != null && r.price <= e.max_bid;
-  return `<details class="row ${r.status}" data-key="${esc(r.key)}" ${openKeys.has(r.key) ? "open" : ""}>
+  const bidding = BIDS.has(r.key), isNew = r.status === "active" && !SEEN.has(r.key);
+  return `<details class="row ${r.status}${bidding ? " bidding" : ""}" data-key="${esc(r.key)}" ${openKeys.has(r.key) ? "open" : ""}>
   <summary>
     <div class="c-watch watch">${r.image ? `<img src="${esc(r.image)}" alt="" loading="lazy">` : `<img alt="">`}
-      <div class="t"><div class="name">${esc(r.name || r.title)}</div>
+      <div class="t"><div class="name"><button class="star${bidding ? " on" : ""}" data-bid="${esc(r.key)}" aria-pressed="${bidding}" title="${bidding ? "Remove from Bidding" : "Mark as bidding"}">${bidding ? "★" : "☆"}</button>${isNew ? `<span class="badge-new">NEW</span>` : ""}${esc(r.name || r.title)}</div>
       <div class="sub"><span class="concern" style="background:${cc}" title="${cl}"></span>${esc(r.source)}${r.reference ? " " + esc(r.reference) : ""}${r.era ? ", " + esc(r.era) : ""}</div></div></div>
     <div class="c-price num"><div class="fig${flashed}">${money(r.price)}</div><div class="small">${r.bids != null ? r.bids + " bids" : "buy now"}</div></div>
     <div class="c-ends num"><div class="fig" data-left="${esc(r.key)}">${r.status === "ended" ? "Ended" : fmtLeft(h)}</div></div>
@@ -237,12 +250,24 @@ function row(r){
     ${riskHtml(r)}
     ${marketHtml(r)}
     <div class="actions"><a class="btn" href="${esc(r.url)}" target="_blank" rel="noopener">Open listing</a>
+      <button class="btn" data-bid="${esc(r.key)}">${bidding ? "★ Stop tracking bid" : "☆ I'm bidding on this"}</button>
       <button class="btn" data-dismiss="${esc(r.key)}">${LOCAL ? "Remove from board" : "Hide on this device"}</button></div>
   </div></details>`;
 }
+let SEEN = new Set(), BIDS = new Set();
 function render(){
+  SEEN = getSet(SEEN_KEY); BIDS = getSet(BID_KEY);
   const hid = LOCAL ? new Set() : hidden();
-  let rows = data.rows.filter(r => !hid.has(r.key) && (filter === "ended" ? r.status === "ended" : r.status === "active"));
+  const risky = r => $("#hideHigh").checked && (r.concern === "high" || (r.econ.genuine_chance != null && r.econ.genuine_chance < 0.1));
+  const live = data.rows.filter(r => !hid.has(r.key) && r.status === "active" && !risky(r));
+  const newKeys = live.filter(r => !SEEN.has(r.key)).map(r => r.key);
+  $("#cntNew").textContent = newKeys.length ? ` ${newKeys.length}` : "";
+  $("#cntBid").textContent = BIDS.size ? ` ${data.rows.filter(r => BIDS.has(r.key)).length}` : "";
+  $("#markSeen").hidden = !newKeys.length;
+  // Bidding shows your watches whether live or ended, so you can see how each one finished.
+  let rows = filter === "bidding" ? data.rows.filter(r => BIDS.has(r.key))
+    : data.rows.filter(r => !hid.has(r.key) && (filter === "ended" ? r.status === "ended" : r.status === "active"));
+  if (filter === "new") rows = rows.filter(r => !SEEN.has(r.key));
   if (filter === "soon") rows = rows.filter(r => { const h = hoursLeft(r); return h != null && h < 24; });
   if (filter === "clears") rows = rows.filter(r => r.econ.max_bid != null && r.price <= r.econ.max_bid);
   // High fake risk: the AI's overall call is high concern, or the evidence puts it under 10% genuine.
@@ -251,6 +276,8 @@ function render(){
     ? (a,b) => (hoursLeft(a) ?? 1e9) - (hoursLeft(b) ?? 1e9)
     : (a,b) => (b.econ.margin_pct ?? -1e9) - (a.econ.margin_pct ?? -1e9));
   $("#rows").innerHTML = rows.length ? rows.map(row).join("") :
+    filter === "bidding" ? `<p class="empty">No watches marked yet. Tap the ☆ next to a watch you've bid on and it shows up here, including after the auction ends.</p>` :
+    filter === "new" ? `<p class="empty">You're caught up. Watches you haven't opened yet show up here with a NEW tag.</p>` :
     data.rows.length ? `<p class="empty">Nothing matches this filter.</p>` :
     `<p class="empty">The board fills from your daily runs. Run <code>python main.py</code>, then reload. Every AI-checked watch lands here.</p>`;
   data.rows.forEach(r => prevPrice[r.key] = r.price);
@@ -270,12 +297,22 @@ async function load(){
   catch(e){ $("#status").textContent = LOCAL ? "Can't reach the board server. Is python dashboard.py running?" : "Board data not published yet. Run the workflow on GitHub first."; }
 }
 document.addEventListener("click", async ev => {
+  const b = ev.target.closest("[data-bid]");
+  if (b){ ev.preventDefault(); ev.stopPropagation(); toggleBid(b.dataset.bid); render(); return; }
   const f = ev.target.closest("[data-f]"), s = ev.target.closest("[data-s]"), d = ev.target.closest("[data-dismiss]");
   if (f){ filter = f.dataset.f; document.querySelectorAll("[data-f]").forEach(b => b.setAttribute("aria-pressed", b === f)); render(); }
   if (s){ sort = s.dataset.s; document.querySelectorAll("[data-s]").forEach(b => b.setAttribute("aria-pressed", b === s)); render(); }
   if (d){ if (LOCAL){ await fetch("/api/dismiss",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:d.dataset.dismiss})}); load(); } else { hide(d.dataset.dismiss); render(); } }
 });
-document.addEventListener("toggle", ev => { const k = ev.target.dataset?.key; if (k) ev.target.open ? openKeys.add(k) : openKeys.delete(k); }, true);
+document.addEventListener("toggle", ev => { const k = ev.target.dataset?.key; if (!k) return;
+  if (ev.target.open){ openKeys.add(k); if (!SEEN.has(k)){ markSeen([k]); SEEN.add(k);
+    const badge = ev.target.querySelector(".badge-new"); if (badge) badge.remove();
+    const hideHigh = $("#hideHigh").checked;
+    const n = data.rows.filter(r => r.status === "active" && !getSet(SEEN_KEY).has(r.key) && !hidden().has(r.key)
+      && !(hideHigh && (r.concern === "high" || (r.econ.genuine_chance != null && r.econ.genuine_chance < 0.1)))).length;
+    $("#cntNew").textContent = n ? ` ${n}` : ""; $("#markSeen").hidden = !n; } }
+  else openKeys.delete(k); }, true);
+$("#markSeen").addEventListener("click", () => { markSeen(data.rows.map(r => r.key)); render(); });
 $("#hideHigh").addEventListener("change", render);
 let refreshWired = false;
 function setupRefresh(){
