@@ -19,24 +19,31 @@ def _ended_by_clock(lst):
 
 def add_watchlist(store, cfg, sources):
     """Put hand-picked listings from config.yaml `watchlist` on the board. Returns how many were added."""
-    tracked = {lst.key for lst, _, _ in store.tracked(("active", "ended"))}
+    tracked = {lst.key: (lst, status) for lst, status, _ in store.tracked(("active", "ended"))}
     added = 0
     for item in cfg.get("watchlist") or []:
         if isinstance(item, (int, str)):
             item = {"id": item}
         source = item.get("source", "shopgoodwill")
         key = f"{source}:{item['id']}"
+        reasons = ["Added by hand"]
+        if item.get("note"):
+            reasons.append(str(item["note"]))
+        if item.get("max_bid"):
+            reasons.append(f"Your max bid: ${item['max_bid']}")
+        if key in tracked:  # already on the board: keep the note and max bid in sync with config
+            lst, status = tracked[key]
+            if lst.reasons and lst.reasons[0] == "Added by hand" and lst.reasons != reasons:
+                lst.reasons = reasons
+                store.update_tracked(lst, status)
+            continue
         src = sources.get(source)
-        if key in tracked or not src or not hasattr(src, "get"):
+        if not src or not hasattr(src, "get"):
             continue
         lst = src.get(item["id"])
         if not lst:
             continue
-        lst.reasons = ["Added by hand"]
-        if item.get("note"):
-            lst.reasons.append(str(item["note"]))
-        if item.get("max_bid"):
-            lst.reasons.append(f"Your max bid: ${item['max_bid']}")
+        lst.reasons = reasons
         store.track(lst)
         added += 1
         time.sleep(cfg["search"].get("polite_delay_seconds", 2))
