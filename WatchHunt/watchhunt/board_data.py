@@ -31,10 +31,14 @@ def add_watchlist(store, cfg, sources):
             reasons.append(str(item["note"]))
         if item.get("max_bid"):
             reasons.append(f"Your max bid: ${item['max_bid']}")
-        if key in tracked:  # already on the board: keep the note and max bid in sync with config
+        ship = item.get("shipping")
+        if key in tracked:  # already on the board: keep note, max bid and shipping in sync with config
             lst, status = tracked[key]
-            if lst.reasons and lst.reasons[0] == "Added by hand" and lst.reasons != reasons:
+            if lst.reasons and lst.reasons[0] == "Added by hand" and (lst.reasons != reasons or
+                                                                      (ship is not None and lst.shipping != float(ship))):
                 lst.reasons = reasons
+                if ship is not None:
+                    lst.shipping = float(ship)
                 store.update_tracked(lst, status)
             continue
         src = sources.get(source)
@@ -44,6 +48,8 @@ def add_watchlist(store, cfg, sources):
         if not lst:
             continue
         lst.reasons = reasons
+        if ship is not None:
+            lst.shipping = float(ship)
         store.track(lst)
         added += 1
         time.sleep(cfg["search"].get("polite_delay_seconds", 2))

@@ -262,16 +262,16 @@ economics:
     condition_gap: 2.0     # if Lens value is over 2x the AI's as-is high estimate, Lens matched better-condition pieces
 
 # Hand-picked listings to put on the board. They're added on the next hourly run and
-# their bids refresh like everything else. Add a line with an item id from the listing URL.
+# their bids refresh like everything else. shipping = what you pay to receive it. Add a line with an item id from the listing URL.
 watchlist:
-  - {id: 279454050, max_bid: 150, note: "Omega ladies 18K case, running. Bracelet likely gold-filled"}
-  - {id: 279233878, max_bid: 110, note: "Omega ladies 14K white gold case, running, 8.6g total"}
-  - {id: 279454113, max_bid: 100, note: "Omega ladies 14K case, missing crown. Melt play"}
-  - {id: 279540498, max_bid: 100, note: "Omega 14K white gold, diamond accents, Cal 485"}
-  - {id: 279701432, max_bid: 100, note: "Longines 14K case. Bracelet likely base metal (green residue)"}
-  - {id: 279711019, max_bid: 35, note: "Citizen Eco-Drive perpetual chrono, listed working. Rectangular dress style, worn strap"}
-  - {id: 279733406, max_bid: 40, note: "Citizen Eco-Drive titanium perpetual chrono. Try charging in sun"}
-  - {id: 279316014, max_bid: 30, note: "Seiko 7T32 chrono, 'doesn't work'. Likely battery"}
-  - {id: 279329588, max_bid: 120, note: "Citizen Promaster 200M orange dial. Plus $9 shipping"}
-  - {id: 279768559, max_bid: 60, note: "Seiko Flightmaster Sports 150 chrono, untested"}
-  - {id: 279222614, max_bid: 45, note: "Seiko two-tone perpetual calendar. Check caseback for 8F code"}
+  - {id: 279454050, max_bid: 150, shipping: 5, note: "Omega ladies 18K case, running. Bracelet likely gold-filled"}
+  - {id: 279233878, max_bid: 110, shipping: 5, note: "Omega ladies 14K white gold case, running, 8.6g total"}
+  - {id: 279454113, max_bid: 100, shipping: 5, note: "Omega ladies 14K case, missing crown. Melt play"}
+  - {id: 279540498, max_bid: 100, shipping: 5, note: "Omega 14K white gold, diamond accents, Cal 485"}
+  - {id: 279701432, max_bid: 100, shipping: 5, note: "Longines 14K case. Bracelet likely base metal (green residue)"}
+  - {id: 279711019, max_bid: 35, shipping: 5, note: "Citizen Eco-Drive perpetual chrono, listed working. Rectangular dress style, worn strap"}
+  - {id: 279733406, max_bid: 40, shipping: 5, note: "Citizen Eco-Drive titanium perpetual chrono. Try charging in sun"}
+  - {id: 279316014, max_bid: 30, shipping: 5, note: "Seiko 7T32 chrono, 'doesn't work'. Likely battery"}
+  - {id: 279329588, max_bid: 120, shipping: 5, note: "Citizen Promaster 200M orange dial. Plus $9 shipping"}
+  - {id: 279768559, max_bid: 60, shipping: 5, note: "Seiko Flightmaster Sports 150 chrono, untested"}
+  - {id: 279222614, max_bid: 45, shipping: 5, note: "Seiko two-tone perpetual calendar. Check caseback for 8F code"}
