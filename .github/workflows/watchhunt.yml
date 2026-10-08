@@ -2,7 +2,7 @@ name: WatchHunt
 
 on:
   schedule:
-    - cron: "17 */3 * * *"   # full scan every 3 hours (UTC)
+    - cron: "17 11,23 * * *"   # full scan twice a day, about 7 AM and 7 PM Eastern (times are UTC)
     - cron: "47 * * * *"     # bid refresh every hour
   workflow_dispatch:
     inputs:
@@ -58,7 +58,7 @@ jobs:
       - run: pip install -r requirements.txt
 
       - name: Scan for new listings
-        if: github.event.schedule == '17 */3 * * *' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'scan')
+        if: github.event.schedule == '17 11,23 * * *' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'scan')
         run: python main.py
 
       - name: Refresh bids on the board

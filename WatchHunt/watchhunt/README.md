@@ -3,7 +3,7 @@
 ## Running on GitHub (no computer needed)
 
 GitHub runs the tool on a schedule and publishes the board as a web page:
-- Full scan for new listings every 3 hours.
+- Full scan for new listings twice a day (about 7 AM and 7 PM Eastern).
 - Bid refresh on everything on the board every hour.
 - Board page at https://YOUR-USERNAME.github.io/WatchHunt/
 
