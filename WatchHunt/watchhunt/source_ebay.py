@@ -75,7 +75,8 @@ class EbaySource:
                 r = requests.get(SEARCH_URL, headers=self._auth_headers(), params=params, timeout=30)
                 r.raise_for_status()
             except requests.RequestException as e:
-                print(f"  [ebay] query '{q}' failed: {e}")
+                body = getattr(getattr(e, "response", None), "text", "") or ""
+                print(f"  [ebay] query '{q}' failed: {e} {body[:200]}")
                 continue
             for s in r.json().get("itemSummaries", []) or []:
                 if s["itemId"] in seen:

@@ -61,6 +61,9 @@ jobs:
         if: github.event.schedule == '17 11,23 * * *' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'scan')
         run: python main.py
 
+      - name: Check eBay connection
+        run: python ebay_check.py
+
       - name: Refresh bids on the board
         run: python ci.py refresh
 
@@ -70,9 +73,11 @@ jobs:
       - name: Save state
         run: |
           mkdir -p /tmp/state && cp watchhunt.db /tmp/state/
+          cp ebay_status.json /tmp/state/ 2>/dev/null || true
           cd /tmp/state
           git init -q -b state
           git add watchhunt.db
+          git add ebay_status.json 2>/dev/null || true
           git -c user.name="watchhunt-bot" -c user.email="watchhunt-bot@users.noreply.github.com" \
               commit -qm "state $(date -u +%Y-%m-%dT%H:%MZ)"
           git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" state
