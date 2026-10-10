@@ -88,14 +88,14 @@ shopgoodwill:
   enabled: true
   page_size: 40
   queries:
-    - watch
-    - wristwatch
+    - seiko automatic
+    - seiko diver
+    - seiko 7s26
+    - seiko skx
+    - seiko 21 jewels
     - {q: rolex, max_price: 1500}
     - {q: cartier, max_price: 1500}
     - {q: tudor, max_price: 1500}
-    - watch lot
-    - vintage watch
-    - mens watch
 
 propertyroom:
   enabled: true
@@ -276,3 +276,8 @@ watchlist:
   - {id: 279329588, max_bid: 120, shipping: 5, value: [150, 250], service: 15, basis: "Resale estimate for a vintage Promaster, unverified", note: "Citizen Promaster 200M orange dial. Plus $9 shipping"}
   - {id: 279768559, max_bid: 60, shipping: 5, value: [100, 250], service: 60, basis: "Resale estimate, chronograph untested, unverified", note: "Seiko Flightmaster Sports 150 chrono, untested"}
   - {id: 279222614, max_bid: 45, shipping: 5, value: [80, 180], service: 15, basis: "Resale estimate for a Seiko quartz perpetual, unverified", note: "Seiko two-tone perpetual calendar. Check caseback for 8F code"}
+  - {id: 279834312, max_bid: 20, shipping: 15, value: [50, 100], service: 0, basis: "Resale estimate for a running vintage Seiko automatic, unverified", note: "Seiko DX automatic day-date, steel"}
+  - {id: 279861815, max_bid: 15, shipping: 15, value: [40, 90], service: 0, basis: "Resale estimate for a 1960s Sportsmatic, unverified", note: "Seiko Sportsmatic 5 21J"}
+  - {id: 279889584, max_bid: 15, shipping: 15, value: [40, 80], service: 0, basis: "Resale estimate, model unidentified, unverified", note: "Seiko automatic 17J steel black dial"}
+  - {id: 280035890, max_bid: 45, shipping: 15, value: [90, 130], service: 0, basis: "Resale estimate for a Seiko Recraft 7S26, unverified", note: "Seiko Recraft 7S26-04V0"}
+  - {id: 279778224, shipping: 15, note: "Steel automatic diver. Check if 6309 Turtle before setting a max bid"}
