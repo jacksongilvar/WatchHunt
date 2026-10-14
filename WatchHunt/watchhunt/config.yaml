@@ -285,3 +285,5 @@ watchlist:
   - {id: 279854371, max_bid: 55, shipping: 15, value: [100, 160], service: 0, basis: "Resale estimate for a vintage Hamilton steel automatic, unverified", note: "Hamilton automatic stainless date 79003-3. Check dial and caseback match and that it runs"}
   - {id: 280290208, max_bid: 33, shipping: 15, value: [75, 100], service: 0, basis: "Poshmark vintage Seiko automatic sold median $87", note: "Seiko 5 6309-730A black dial, stainless"}
   - {id: 280139516, max_bid: 30, shipping: 15, value: [70, 90], service: 0, basis: "Poshmark vintage Seiko automatic sold median $87", note: "Seiko 6309-8019 17J, 1980s"}
+  - {id: 280353760, max_bid: 25, shipping: 15, value: [60, 90], service: 0, basis: "Estimate, vintage Seiko date automatic as-is", note: "Seiko Automatic 17J Perpetual Calendar dial, working, crystal blemish (may need crystal)"}
+  - {id: 280321828, max_bid: 30, shipping: 15, value: [70, 100], service: 0, basis: "Estimate, Seiko 5 Actus as-is", note: "Seiko 5 Actus automatic, runs, light wear. Check dial/caseback match"}
