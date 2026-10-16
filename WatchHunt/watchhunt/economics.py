@@ -14,6 +14,8 @@ Fake-risk brands (Rolex, Cartier, Tudor; brands.<name>.fake_risk in config) get 
 The chance starts at the brand's base rate and moves with each authentication check the AI scored
 (pass / fail), a suspiciously low fixed price, and a high share of replica Google Lens matches.
 """
+from sizing import size_verdict
+
 
 
 def value_band(lst, econ):
@@ -153,6 +155,13 @@ def numbers(lst, econ, brands=None):
     all_in = lst.price * (1 + prem) + fixed
 
     band = value_band(lst, econ)
+    size = size_verdict(lst)
+    # A hand-entered value assumes a men's watch unless the entry says otherwise. Cut it when the watch is women's.
+    # AI ranges already price the size they see; sold and Lens bands come from matching watches.
+    if band and size["flag"] == "ladies" and band["basis"] == "manual" and (lst.manual or {}).get("wearer") != "ladies":
+        k = econ.get("ladies_value_factor", 0.5)
+        band = dict(band, low=round(band["low"] * k, 2), mid=round(band["mid"] * k, 2), high=round(band["high"] * k, 2),
+                    basis_note=f'{band["basis_note"]}, cut to {round(100 * k)}% because it is a women\'s watch')
     p, steps = None, []
     if band and risky:
         p, steps = genuine_chance(lst, econ, risky, band["low"])
@@ -165,7 +174,7 @@ def numbers(lst, econ, brands=None):
     evidence = next((st["chance"] for st in reversed(steps) if not st["label"].startswith("Claude's")), None)
     out = {"all_in": round(all_in, 2), "service": service, "value": band,
            "fake_risk": bool(risky), "genuine_chance": p, "genuine_steps": steps, "auth_cost": auth,
-           "evidence_chance": evidence, "claude_chance": claude_read(lst.ai, fr) if risky else None,
+           "evidence_chance": evidence, "size": size, "claude_chance": claude_read(lst.ai, fr) if risky else None,
            "ship_in": ship_in, "ship_in_basis": "listing" if lst.shipping is not None else "estimate",
            "net_mid": None, "margin_pct": None, "max_bid": None}
     if not band:

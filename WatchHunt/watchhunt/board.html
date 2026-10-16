@@ -33,6 +33,8 @@ h1{font:600 44px/1 var(--figures);letter-spacing:.01em;margin:0}
 .seg button{white-space:nowrap}
 .ml{display:none}
 .cnt{margin-left:6px;font-size:12px;opacity:.75}
+.badge-size{display:inline-block;margin-right:6px;padding:0 6px;border-radius:999px;background:#d9534f;color:#fff;font-size:11px;font-weight:700;vertical-align:2px}
+.badge-size.maybe{background:#e0a33a;color:#0b1220}
 .badge-new{display:inline-block;margin-right:6px;padding:0 6px;border-radius:999px;background:var(--lume);color:#0b1220;font-size:11px;font-weight:700;vertical-align:2px}
 .star{background:none;border:0;padding:0 6px 0 0;font-size:18px;line-height:1;cursor:pointer;color:var(--muted)}
 .star.on{color:var(--brass)}
@@ -202,6 +204,19 @@ function marketHtml(r){
     <ul>${(m.examples || []).map(x => `<li><a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.title)}</a> ${esc(x.source)} ${money(x.price)}</li>`).join("")}</ul></div>`;
 }
 const pct100 = p => Math.round(p * 100) + "%";
+function sizeBadge(r){
+  const z = (r.econ || {}).size || {};
+  if (z.flag === "ladies") return `<span class="badge-size" title="${esc((z.reasons || []).join("; "))}">WOMEN'S</span>`;
+  if (z.flag === "possible") return `<span class="badge-size maybe" title="${esc((z.reasons || []).join("; "))}">SMALL?</span>`;
+  return "";
+}
+function sizeHtml(r){
+  const z = (r.econ || {}).size || {};
+  if (!z.flag) return "";
+  return `<div><b>${z.flag === "ladies" ? "Women's watch" : "Possibly a women's or small watch"}</b>
+    <div>Women's and small watches usually resell for about half of the men's version. Check the case size and movement number before bidding.</div>
+    <ul>${(z.reasons || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
+}
 function genuineTag(r){
   const e = r.econ;
   if (e.fake_risk && e.genuine_chance != null) {
@@ -237,7 +252,7 @@ function row(r){
   return `<details class="row ${r.status}${bidding ? " bidding" : ""}" data-key="${esc(r.key)}" ${openKeys.has(r.key) ? "open" : ""}>
   <summary>
     <div class="c-watch watch">${r.image ? `<img src="${esc(r.image)}" alt="" loading="lazy">` : `<img alt="">`}
-      <div class="t"><div class="name"><button class="star${bidding ? " on" : ""}" data-bid="${esc(r.key)}" aria-pressed="${bidding}" title="${bidding ? "Remove from Bidding" : "Mark as bidding"}">${bidding ? "★" : "☆"}</button>${isNew ? `<span class="badge-new">NEW</span>` : ""}${esc(r.name || r.title)}</div>
+      <div class="t"><div class="name"><button class="star${bidding ? " on" : ""}" data-bid="${esc(r.key)}" aria-pressed="${bidding}" title="${bidding ? "Remove from Bidding" : "Mark as bidding"}">${bidding ? "★" : "☆"}</button>${isNew ? `<span class="badge-new">NEW</span>` : ""}${sizeBadge(r)}${esc(r.name || r.title)}</div>
       <div class="sub"><span class="concern" style="background:${cc}" title="${cl}"></span>${esc(r.source)}${r.reference ? " " + esc(r.reference) : ""}${r.era ? ", " + esc(r.era) : ""}</div></div></div>
     <div class="c-price num"><div class="fig${flashed}">${money(r.price)}</div><div class="small">${r.bids != null ? r.bids + " bids" : "buy now"}</div></div>
     <div class="c-ends num"><div class="fig" data-left="${esc(r.key)}">${r.status === "ended" ? "Ended" : fmtLeft(h)}</div></div>
@@ -248,6 +263,7 @@ function row(r){
   </summary>
   <div class="detail">
     <div><b>${esc(r.title)}</b><div>${esc(r.summary)}</div></div>
+    ${sizeHtml(r)}
     <div><b>${cl}</b>${r.flags && r.flags.length ? `<ul>${r.flags.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}</div>
     <div><b>How the numbers work</b><div>All-in cost ${money(e.all_in)} includes ${money(e.service)} service,${e.auth_cost ? ` ${money(e.auth_cost)} authentication,` : ""} ${money(e.ship_in)} inbound shipping${e.ship_in_basis === "listing" ? " (from the listing)" : " (estimate)"}.
       ${v ? `Value ${money(v.low)} to ${money(v.high)} from ${esc(v.basis_note)}. Max bid uses the low end.` : "Needs sold data, an AI estimate, or a value in your watchlist entry."}</div></div>

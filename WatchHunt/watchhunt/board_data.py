@@ -32,7 +32,7 @@ def add_watchlist(store, cfg, sources):
         if item.get("max_bid"):
             reasons.append(f"Your max bid: ${item['max_bid']}")
         ship = item.get("shipping")
-        manual = {k: item[k] for k in ("value", "service", "basis", "max_bid") if item.get(k) is not None} or None
+        manual = {k: item[k] for k in ("value", "service", "basis", "max_bid", "wearer") if item.get(k) is not None} or None
         if key in tracked:  # already on the board: keep note, max bid and shipping in sync with config
             lst, status = tracked[key]
             if lst.reasons and lst.reasons[0] == "Added by hand" and (lst.reasons != reasons or lst.manual != manual or

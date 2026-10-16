@@ -82,11 +82,22 @@ JSON schema:
   "photo_quality": "poor" | "ok" | "good",
   "questions_for_seller": [string],
   "rough_value_range_usd": [number, number] or null,
+  "wearer": "mens" | "unisex" | "ladies" | "unknown",
+  "case_size_mm": number or null,
+  "size_evidence": string or null,
   "worth_a_closer_look": boolean,
   "genuine_estimate": number between 0 and 1, or null,
   "genuine_reasoning": string or null,
   "summary": string
 }
+
+wearer and case_size_mm: women's and very small watches resell for far less than men's, so judge size every time.
+Clues: crown, lugs and date window large next to the case; narrow band or expansion band; short bracelet length;
+a stated case size under about 32mm; women's movement or reference numbers (Seiko 2205, 2206, 2418, 2906, 4205,
+4207, 1F20; Hamilton 7900x); words like ladies, women's, petite. Estimate case_size_mm from any ruler, hand or
+stated size, else null. Use "unknown" only when the photos truly give nothing to go on. size_evidence: the clue you
+used, in a few words. Value rough_value_range_usd for the size you see: women's pieces usually sell for about half
+of the men's version.
 
 genuine_estimate: only for brands in the authentication checklist, otherwise null. Your overall, calibrated
 probability that this watch is genuine, weighing everything together: the checks, the listing text, the seller

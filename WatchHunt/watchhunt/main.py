@@ -33,6 +33,8 @@ def needs_recheck(cfg, lst):
     """Board rows worth another AI call: the check failed, or a fake-risk watch has no per-check scores yet."""
     if check_failed(lst.ai):
         return True
+    if not lst.ai and lst.reasons and lst.reasons[0] == "Added by hand":
+        return True  # hand-added watchlist items get the same photo check as everything else
     ai = lst.ai or {}
     return bool(ai) and not ai.get("is_lot") and is_high_risk(cfg, lst.brand_hint or (ai.get("brand") or "").lower()) \
         and not ai.get("auth_checks")
