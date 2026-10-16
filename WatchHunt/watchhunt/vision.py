@@ -83,8 +83,16 @@ JSON schema:
   "questions_for_seller": [string],
   "rough_value_range_usd": [number, number] or null,
   "worth_a_closer_look": boolean,
+  "genuine_estimate": number between 0 and 1, or null,
+  "genuine_reasoning": string or null,
   "summary": string
-}"""
+}
+
+genuine_estimate: only for brands in the authentication checklist, otherwise null. Your overall, calibrated
+probability that this watch is genuine, weighing everything together: the checks, the listing text, the seller
+type, the price, what is missing from the photos. Start from the brand's base rate for cheap, non-specialist
+listings and move from there. Never above 0.9, because photos cannot settle it. genuine_reasoning: one or two
+short sentences on what moved you most."""
 
 
 def _sniff(data):
@@ -151,9 +159,9 @@ def checklist_text(fake_risk_cfg):
 
 
 class Vision:
-    def __init__(self, api_key, model, max_images=4, fake_risk_cfg=None):
+    def __init__(self, api_key, model, max_images=4, fake_risk_cfg=None, max_tokens=8000):
         self.client = anthropic.Anthropic(api_key=api_key)
-        self.model, self.max_images = model, max_images
+        self.model, self.max_images, self.max_tokens = model, max_images, max_tokens
         self.system = SYSTEM + checklist_text(fake_risk_cfg)
 
     def analyze(self, listing: Listing, hints: str = "", max_images=None):
@@ -174,17 +182,27 @@ class Vision:
         )
         if hints:
             text += "\n\n" + hints
-        try:
-            msg = self.client.messages.create(
-                model=self.model,
-                max_tokens=3000,
-                system=self.system,
-                messages=[{"role": "user", "content": blocks + [{"type": "text", "text": text}]}],
-            )
-        except anthropic.APIError as e:
-            return {"summary": f"AI call failed: {e}", "check_failed": True, "authenticity_concern": "cannot_assess",
-                    "worth_a_closer_look": False}
-        raw = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
-        parsed = _parse_json(raw)
-        return parsed or {"summary": "AI returned unparseable output.", "raw": raw[:500], "check_failed": True,
-                          "authenticity_concern": "cannot_assess", "worth_a_closer_look": False}
+        raw, stop = "", None
+        for attempt in range(2):
+            prompt = text if attempt == 0 else text + (
+                "\n\nYour last reply was cut off before the JSON closed. Reply again, much shorter: every note "
+                "under 12 words, at most 3 red flags and 3 questions.")
+            try:
+                msg = self.client.messages.create(
+                    model=self.model,
+                    max_tokens=self.max_tokens,
+                    system=self.system,
+                    messages=[{"role": "user", "content": blocks + [{"type": "text", "text": prompt}]}],
+                )
+            except anthropic.APIError as e:
+                return {"summary": f"AI call failed: {e}", "check_failed": True, "authenticity_concern": "cannot_assess",
+                        "worth_a_closer_look": False}
+            raw = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
+            stop = getattr(msg, "stop_reason", None)
+            parsed = _parse_json(raw)
+            if parsed:
+                return parsed
+            print(f"    AI reply not parseable (stop_reason={stop}, {len(raw)} chars)" + (", retrying shorter" if attempt == 0 else ""))
+        why = "cut off at the output limit" if stop == "max_tokens" else "not valid JSON"
+        return {"summary": f"AI returned unparseable output ({why}).", "raw": raw[:500], "check_failed": True,
+                "authenticity_concern": "cannot_assess", "worth_a_closer_look": False}

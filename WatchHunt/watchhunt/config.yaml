@@ -19,6 +19,7 @@ ai:
   max_listings_per_run: 25   # hard cap on AI calls per run (cost control)
   max_images_per_listing: 4
   max_images_high_risk: 8    # Rolex, Cartier, Tudor: more photos (caseback, clasp, rehaut) to check for fakes
+  max_tokens: 8000           # output room per check. Luxury-brand checklists are long; 3000 cut them off
 
 # Google Lens via SerpApi (serpapi.com). Runs on each AI-checked listing's main photo, before Claude.
 # Lens match titles help Claude identify the watch; priced matches become the "market" value band.

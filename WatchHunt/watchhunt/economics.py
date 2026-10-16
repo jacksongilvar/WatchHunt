@@ -118,7 +118,25 @@ def genuine_chance(lst, econ, brand, genuine_low=None):
     p = min(max(p, fr.get("min_chance", 0.01)), fr.get("max_chance", 0.9))
     if round(p, 3) != steps[-1]["chance"]:
         steps.append({"label": "Capped: photos alone can never settle it", "chance": round(p, 3)})
+
+    # Claude's overall read. Shown next to the evidence score; the lower of the two sets the price,
+    # so a doubt from either side lowers the max bid and neither can raise it on its own.
+    est = claude_read(ai, fr)
+    if est is not None:
+        used = est < p
+        steps.append({"label": f"Claude's overall read: {round(100 * est)}%" + (" (lower, so this is used)" if used
+                      else " (higher than the evidence score, so the evidence score is used)"),
+                      "note": ai.get("genuine_reasoning") or "", "chance": round(min(p, est), 3)})
+        p = min(p, est)
     return round(p, 3), steps
+
+
+def claude_read(ai, fr=None):
+    """Claude's holistic genuine probability from the AI check, or None."""
+    est = (ai or {}).get("genuine_estimate")
+    if not isinstance(est, (int, float)) or isinstance(est, bool) or not 0 <= est <= 1:
+        return None
+    return min(float(est), (fr or {}).get("max_chance", 0.9))
 
 
 def numbers(lst, econ, brands=None):
@@ -144,8 +162,10 @@ def numbers(lst, econ, brands=None):
                     mid=round(p * band["mid"] + (1 - p) * fake, 2),
                     high=round(p * band["high"] + (1 - p) * fake, 2),
                     basis_note=f'{band["basis_note"]}, adjusted for a {round(100 * p)}% chance it is genuine')
+    evidence = next((st["chance"] for st in reversed(steps) if not st["label"].startswith("Claude's")), None)
     out = {"all_in": round(all_in, 2), "service": service, "value": band,
            "fake_risk": bool(risky), "genuine_chance": p, "genuine_steps": steps, "auth_cost": auth,
+           "evidence_chance": evidence, "claude_chance": claude_read(lst.ai, fr) if risky else None,
            "ship_in": ship_in, "ship_in_basis": "listing" if lst.shipping is not None else "estimate",
            "net_mid": None, "margin_pct": None, "max_bid": None}
     if not band:

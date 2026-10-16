@@ -122,7 +122,7 @@ def main():
         if key:
             from vision import Vision
             vision = Vision(key, cfg["ai"]["model"], cfg["ai"].get("max_images_per_listing", 4),
-                            cfg["economics"].get("fake_risk"))
+                            cfg["economics"].get("fake_risk"), cfg["ai"].get("max_tokens", 8000))
         else:
             print("! AI skipped: set ANTHROPIC_API_KEY in .env")
 
