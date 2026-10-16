@@ -38,6 +38,9 @@ def main():
         with open(os.path.join(out, "board.json"), "w") as f:
             json.dump(data, f)
         shutil.copy("board.html", os.path.join(out, "index.html"))
+        # Home-screen app files: manifest and icons, so the board installs like an app on a phone.
+        for f in os.listdir("app"):
+            shutil.copy(os.path.join("app", f), os.path.join(out, f))
         print(f"Exported {len(data['rows'])} watches to {out}/")
     else:
         sys.exit("usage: python ci.py refresh | python ci.py export [dir]")

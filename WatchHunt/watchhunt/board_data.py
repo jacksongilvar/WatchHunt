@@ -17,6 +17,14 @@ def _ended_by_clock(lst):
         return False
 
 
+def _name(ai):
+    """Brand plus model, without repeating the brand when the model already starts with it ("Seiko Seiko 5")."""
+    brand, model = (ai.get("brand") or "").strip(), (ai.get("model") or "").strip()
+    if brand and model.lower().startswith(brand.lower()):
+        return model
+    return " ".join(x for x in [brand, model] if x)
+
+
 def add_watchlist(store, cfg, sources):
     """Put hand-picked listings from config.yaml `watchlist` on the board. Returns how many were added."""
     tracked = {lst.key: (lst, status) for lst, status, _ in store.tracked(("active", "ended"))}
@@ -100,7 +108,7 @@ def build_board(store, cfg):
             "image": lst.image_urls[0] if lst.image_urls else None,
             "price": lst.price, "bids": lst.bids, "format": lst.buying_format,
             "end_time": lst.end_time, "time_left": lst.time_left,
-            "name": " ".join(x for x in [ai.get("brand"), ai.get("model")] if x) or lst.brand_hint or "",
+            "name": _name(ai) or lst.brand_hint or "",
             "reference": ai.get("reference_guess"), "era": ai.get("era_guess"),
             "concern": ai.get("authenticity_concern") if ai else None,
             "flags": ai.get("visible_red_flags", []) if ai else [],
