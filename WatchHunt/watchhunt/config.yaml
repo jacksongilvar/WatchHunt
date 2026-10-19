@@ -293,3 +293,9 @@ watchlist:
   - {id: 280139516, max_bid: 30, shipping: 15, value: [70, 90], service: 0, basis: "Poshmark vintage Seiko automatic sold median $87", note: "Seiko 6309-8019 17J, 1980s"}
   - {id: 280353760, max_bid: 25, shipping: 15, value: [60, 90], service: 0, basis: "Estimate, vintage Seiko date automatic as-is", note: "Seiko Automatic 17J Perpetual Calendar dial, working, crystal blemish (may need crystal)"}
   - {id: 280321828, max_bid: 30, shipping: 15, value: [70, 100], service: 0, basis: "Estimate, Seiko 5 Actus as-is", note: "Seiko 5 Actus automatic, runs, light wear. Check dial/caseback match"}
+  - {id: 280948101, shipping: 15, note: "Seiko perpetual calendar quartz, stainless. Candidate, AI to check"}
+  - {id: 280931628, shipping: 15, note: "Seiko 7548-7010 quartz diver 200m. Candidate, AI to check"}
+  - {id: 280926173, shipping: 15, note: "Citizen Eco-Drive 8700 perpetual. Candidate, AI to check"}
+  - {id: 280896457, shipping: 15, note: "Citizen Eco-Drive two-tone perpetual. Candidate, AI to check"}
+  - {id: 280871177, shipping: 15, note: "Citizen Eco-Drive perpetual, works. Candidate, AI to check"}
+  - {id: 280819980, shipping: 15, note: "Seiko 5 Sports 7S36 blue dial. Candidate, AI to check"}
