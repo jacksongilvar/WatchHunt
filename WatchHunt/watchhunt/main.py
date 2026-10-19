@@ -29,6 +29,13 @@ def is_high_risk(cfg, brand):
     return any(b.get("fake_risk") and name in brand for name, b in cfg["brands"].items())
 
 
+def always_ai(cfg, lst):
+    """Listings whose title names a watch type worth checking at any score (cheap untested quartz perpetuals)."""
+    words = cfg["scoring"].get("always_ai_words") or []
+    title = (lst.title or "").lower()
+    return any(w.lower() in title for w in words)
+
+
 def needs_recheck(cfg, lst):
     """Board rows worth another AI call: the check failed, or a fake-risk watch has no per-check scores yet."""
     if check_failed(lst.ai):
@@ -105,7 +112,7 @@ def main():
             n_new += 1
             store.save(lst)  # mark seen even if low score, so it is not re-scored daily
             # Rolex, Cartier and Tudor watches are always looked at, whatever their text score.
-            if lst.score >= cfg["scoring"]["min_score_for_digest"] or (lst.score > -99 and is_high_risk(cfg, lst.brand_hint)):
+            if lst.score >= cfg["scoring"]["min_score_for_digest"] or (lst.score > -99 and (is_high_risk(cfg, lst.brand_hint) or always_ai(cfg, lst))):
                 candidates.append(lst)
                 by_source[lst.key] = src
         stats[src.name] = f"{n_total} fetched, {n_new} new"
@@ -124,7 +131,8 @@ def main():
         if key:
             from vision import Vision
             vision = Vision(key, cfg["ai"]["model"], cfg["ai"].get("max_images_per_listing", 4),
-                            cfg["economics"].get("fake_risk"), cfg["ai"].get("max_tokens", 8000))
+                            cfg["economics"].get("fake_risk"), cfg["ai"].get("max_tokens", 8000),
+                            cfg["economics"].get("service"))
         else:
             print("! AI skipped: set ANTHROPIC_API_KEY in .env")
 
@@ -173,7 +181,7 @@ def main():
         store.commit()
 
     for lst in candidates:
-        if vision and budget > 0 and (lst.score >= cfg["scoring"]["min_score_for_ai"] or is_high_risk(cfg, lst.brand_hint)):
+        if vision and budget > 0 and (lst.score >= cfg["scoring"]["min_score_for_ai"] or is_high_risk(cfg, lst.brand_hint) or always_ai(cfg, lst)):
             print(f"  AI: {lst.title[:70]}")
             check(lst, by_source[lst.key])
             ai_checked.append(lst)

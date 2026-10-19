@@ -258,6 +258,11 @@ function sizeBadge(r){
   if (z.flag === "possible") return `<span class="badge-size maybe" title="${esc((z.reasons || []).join("; "))}">SMALL?</span>`;
   return "";
 }
+function serviceList(e){
+  const j = e.service_jobs || [];
+  if (!j.length) return " (nothing needed" + (e.service_basis ? ", from " + esc(e.service_basis) : "") + ")";
+  return " (" + j.map(x => esc(x.label) + " " + money(x.cost)).join(", ") + (e.service_basis ? "; from " + esc(e.service_basis) : "") + ")";
+}
 function sizeHtml(r){
   const z = (r.econ || {}).size || {};
   if (!z.flag) return "";
@@ -313,7 +318,7 @@ function row(r){
     <div><b>${esc(r.title)}</b><div>${esc(r.summary)}</div></div>
     ${sizeHtml(r)}
     <div><b>${cl}</b>${r.flags && r.flags.length ? `<ul>${r.flags.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}</div>
-    <div><b>How the numbers work</b><div>All-in cost ${money(e.all_in)} includes ${money(e.service)} service,${e.auth_cost ? ` ${money(e.auth_cost)} authentication,` : ""} ${money(e.ship_in)} inbound shipping${e.ship_in_basis === "listing" ? " (from the listing)" : " (estimate)"}.
+    <div><b>How the numbers work</b><div>All-in cost ${money(e.all_in)} includes ${money(e.service)} service${serviceList(e)},${e.auth_cost ? ` ${money(e.auth_cost)} authentication,` : ""} ${money(e.ship_in)} inbound shipping${e.ship_in_basis === "listing" ? " (from the listing)" : " (estimate)"}.
       ${v ? `Value ${money(v.low)} to ${money(v.high)} from ${esc(v.basis_note)}. Max bid uses the low end.` : "Needs sold data, an AI estimate, or a value in your watchlist entry."}</div></div>
     ${riskHtml(r)}
     ${marketHtml(r)}

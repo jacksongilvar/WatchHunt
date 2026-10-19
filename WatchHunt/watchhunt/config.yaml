@@ -8,6 +8,9 @@ search:
 scoring:
   min_score_for_digest: 4    # heuristic score needed to appear in the digest
   min_score_for_ai: 5        # heuristic score needed to spend an AI call
+  # Listings with these words always get an AI check whatever their score: the cheap quartz watches Goodwill
+  # lists as "untested" because it does not replace batteries. Still capped by ai.max_listings_per_run.
+  always_ai_words: [perpetual, eco-drive, eco drive, 8f32, 8f33, 8f35, 8f56]
   # Brand searches (rolex, cartier, tudor) also return perfume, clocks, flatware and DVDs. For fake-risk brands the
   # title must contain one of these words or one of the brand's model names (brands.<name>.also), or it is dropped.
   watch_words: [watch, watches, wristwatch, wrist watch, timepiece, chronograph, chronometer, automatic, self winding,
@@ -218,7 +221,24 @@ economics:
   ship_in: 15              # what you pay to receive it
   ship_out: 20             # insured shipping to your buyer
   buyer_premium_pct: {ebay: 0, shopgoodwill: 0, propertyroom: 0}   # check each site's current terms
-  service_cost: {automatic: 350, manual: 300, quartz: 60, unknown: 250}
+  # Service: what it costs to get a watch ready to sell, priced job by job (see service.py).
+  # cost is [everyday brands, mid Swiss, luxury] by brands.<name>.tier. Unknown brands count as everyday.
+  # The AI picks jobs from the photos (service_needs). Older checks fall back to reading the condition notes.
+  # A watchlist entry can fix it: service: 40 (a total) or jobs: [battery, crystal].
+  # Prices are rough independent-watchmaker estimates. Replace them with real quotes as you get them.
+  service:
+    jobs:
+      battery:             {cost: [20, 30, 60],    label: "Battery",                        ask: "quartz watch needs a battery (added automatically for quartz)"}
+      calendar_reset:      {cost: [15, 25, 60],    label: "Perpetual calendar reset",       ask: "perpetual calendar must be reset after a battery (added automatically)"}
+      solar_cell:          {cost: [60, 90, 150],   label: "Solar rechargeable cell",        ask: "Eco-Drive or solar watch that will not hold a charge, ticks every 2 seconds or is described as failing"}
+      kinetic_cell:        {cost: [60, 90, 150],   label: "Kinetic capacitor",              ask: "any Kinetic or auto-quartz watch"}
+      quartz_movement:     {cost: [40, 120, 300],  label: "Replacement quartz movement",    ask: "quartz watch described as broken for reasons a battery will not fix"}
+      crystal:             {cost: [30, 60, 150],   label: "New crystal",                    ask: "crystal cracked, chipped or deeply scratched (light scratches can be polished, not a job)"}
+      strap:               {cost: [12, 25, 60],    label: "Strap or band",                  ask: "head only, or the strap or band is missing, broken or too worn to sell on"}
+      crown_stem:          {cost: [25, 60, 150],   label: "Crown or stem",                  ask: "crown missing, loose, or stem broken"}
+      clean_regulate:      {cost: [40, 80, 150],   label: "Clean and regulate",             ask: "mechanical watch that is untested or runs poorly but shows no sign of damage"}
+      full_service:        {cost: [120, 250, 450], label: "Full service",                   ask: "mechanical watch that does not run, stops, is sold for parts or repair, or shows water inside"}
+      full_service_chrono: {cost: [200, 400, 700], label: "Full service (chronograph)",     ask: "mechanical chronograph that does not run or is sold for parts or repair"}
   ladies_value_factor: 0.5   # hand-entered values assume men's; women's watches get this share of it
   min_comps: 5             # sold results needed before sold data outranks everything else
   # Counterfeit risk, for brands with fake_risk: true.

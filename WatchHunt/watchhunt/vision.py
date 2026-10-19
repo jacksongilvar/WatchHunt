@@ -82,6 +82,7 @@ JSON schema:
   "photo_quality": "poor" | "ok" | "good",
   "questions_for_seller": [string],
   "rough_value_range_usd": [number, number] or null,
+  "service_needs": [string],
   "wearer": "mens" | "unisex" | "ladies" | "unknown",
   "case_size_mm": number or null,
   "size_evidence": string or null,
@@ -170,10 +171,11 @@ def checklist_text(fake_risk_cfg):
 
 
 class Vision:
-    def __init__(self, api_key, model, max_images=4, fake_risk_cfg=None, max_tokens=8000):
+    def __init__(self, api_key, model, max_images=4, fake_risk_cfg=None, max_tokens=8000, service_cfg=None):
+        from service import jobs_prompt
         self.client = anthropic.Anthropic(api_key=api_key)
         self.model, self.max_images, self.max_tokens = model, max_images, max_tokens
-        self.system = SYSTEM + checklist_text(fake_risk_cfg)
+        self.system = SYSTEM + checklist_text(fake_risk_cfg) + (jobs_prompt(service_cfg) if service_cfg else "")
 
     def analyze(self, listing: Listing, hints: str = "", max_images=None):
         why = []

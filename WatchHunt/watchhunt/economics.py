@@ -14,6 +14,7 @@ Fake-risk brands (Rolex, Cartier, Tudor; brands.<name>.fake_risk in config) get 
 The chance starts at the brand's base rate and moves with each authentication check the AI scored
 (pass / fail), a suspiciously low fixed price, and a high share of replica Google Lens matches.
 """
+from service import estimate as service_estimate
 from sizing import size_verdict
 
 
@@ -143,10 +144,8 @@ def claude_read(ai, fr=None):
 
 def numbers(lst, econ, brands=None):
     prem = econ.get("buyer_premium_pct", {}).get(lst.source, 0) / 100
-    movement = (lst.ai or {}).get("movement_type", "unknown") or "unknown"
-    service = econ.get("service_cost", {}).get(movement, econ.get("service_cost", {}).get("unknown", 250))
-    if (lst.manual or {}).get("service") is not None:
-        service = lst.manual["service"]
+    svc = service_estimate(lst, econ.get("service", {}), brands)
+    service = svc["total"]
     ship_in = lst.shipping if lst.shipping is not None else econ.get("ship_in", 0)
     fr = econ.get("fake_risk", {})
     risky = risky_brand(lst, brands)
@@ -172,7 +171,8 @@ def numbers(lst, econ, brands=None):
                     high=round(p * band["high"] + (1 - p) * fake, 2),
                     basis_note=f'{band["basis_note"]}, adjusted for a {round(100 * p)}% chance it is genuine')
     evidence = next((st["chance"] for st in reversed(steps) if not st["label"].startswith("Claude's")), None)
-    out = {"all_in": round(all_in, 2), "service": service, "value": band,
+    out = {"all_in": round(all_in, 2), "service": service, "service_jobs": svc["jobs"], "service_basis": svc["basis"],
+           "watch_type": svc["type"], "value": band,
            "fake_risk": bool(risky), "genuine_chance": p, "genuine_steps": steps, "auth_cost": auth,
            "evidence_chance": evidence, "size": size, "claude_chance": claude_read(lst.ai, fr) if risky else None,
            "ship_in": ship_in, "ship_in_basis": "listing" if lst.shipping is not None else "estimate",
