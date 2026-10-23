@@ -306,7 +306,7 @@ dashboard:
 # Cost assumptions behind "net margin" and "max bid". VERIFY these; they drive every number.
 economics:
   target_margin_pct: 30    # max bid is the highest price that still clears this margin at the LOW value estimate
-  ship_in: 15              # what you pay to receive it
+  ship_in: 13              # what you pay to receive it. ShopGoodwill Oct 2026: $9.32 shipping + $2.99 handling
   # Where you sell decides fees and outbound shipping. channel picks one of channels below.
   channel: local
   channels:
@@ -317,6 +317,9 @@ economics:
   ship_out: 20
   min_closes: 3            # tracked auction finals for the same brand and movement needed to price from them
   buyer_premium_pct: {ebay: 0, shopgoodwill: 0, propertyroom: 0}   # check each site's current terms
+  # NY sales tax, charged by ShopGoodwill and eBay on item plus shipping (your Oct 2026 orders show it).
+  # Set to 0 only if you register for a NY Certificate of Authority and give sellers a resale certificate.
+  sales_tax_pct: 8.875
   # Service: what it costs to get a watch ready to sell, priced job by job (see service.py).
   # cost is [everyday brands, mid Swiss, luxury] by brands.<name>.tier. Unknown brands count as everyday.
   # The AI picks jobs from the photos (service_needs). Older checks fall back to reading the condition notes.

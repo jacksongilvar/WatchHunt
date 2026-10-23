@@ -375,3 +375,99 @@ def competition(lst, wtype, hours_left, cfg):
             pass
     late = any(r.startswith("Only ") for r in reasons)
     return {"quiet": late or len(reasons) >= c.get("min_signals", 2), "reasons": reasons}
+
+
+# --- Retail comps: what watches like this one sell for when YOU sell them (or on fixed-price eBay) ------------
+# Two inputs, both optional:
+#   data/retail_comps.csv  rows you log by hand: date,title,price,channel,source,notes
+#                          title = describe the watch the way a listing would ("Seiko 5 6309-8019 automatic steel")
+#                          source = own_sale | terapeak | watchexchange | other
+#   your WatchHunter Google Sheet (Flips tab) published as CSV: rows with a Sale price become retail comps.
+
+def _money(v):
+    try:
+        return float(str(v).replace("$", "").replace(",", "").strip())
+    except ValueError:
+        return None
+
+
+def _date(v):
+    from datetime import datetime as dt
+    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y"):
+        try:
+            return dt.strptime(str(v).strip(), fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    return None
+
+
+def retail_rows(pricing, brands, families, fetch=True):
+    import csv
+    import io
+    import os
+    p = pricing or {}
+    raw = []
+    path = p.get("retail_csv")
+    if path and os.path.exists(path):
+        with open(path, newline="") as f:
+            for r in csv.DictReader(f):
+                raw.append((r.get("title"), r.get("price"), r.get("date"), r.get("channel"), r.get("source") or "csv"))
+    url = p.get("retail_sheet_csv_url")
+    if url and fetch:
+        try:
+            import requests
+            text = requests.get(url, timeout=30).text
+            for r in csv.DictReader(io.StringIO(text)):
+                title = " ".join(x for x in [r.get("Watch"), r.get("Reference")] if x)
+                raw.append((title, r.get("Sale price"), r.get("Date sold"), r.get("Sold on"), "own_sale"))
+        except Exception as e:  # the board still builds without it
+            print(f"  [retail] could not read the sheet: {e}")
+    rows = []
+    for i, (title, price, date, chan, src) in enumerate(raw):
+        price = _money(price)
+        if not title or not price or price <= 0:
+            continue
+        rows.append({"key": f"retail:{i}", "title": title, "price": price, "ended": _date(date),
+                     "channel": (chan or "").strip().lower(), "source": src,
+                     "k": comp_key(title, brands, families=families)})
+    return rows
+
+
+class Retail:
+    """Retail price index plus the measured retail / wholesale ratio."""
+
+    def __init__(self, rows, closes_index, pricing=None):
+        self.p = {**DEFAULT_PRICING, **(pricing or {})}
+        self.index = PriceIndex(rows, pricing)
+        self.ratio, self.ratio_pairs = self._ratio(closes_index)
+
+    def _ratio(self, closes_index):
+        """Median of retail median / wholesale median over watches that have both, or the configured default."""
+        default = self.p.get("retail_ratio_default", 1.0)
+        if closes_index is None:
+            return default, 0
+        ratios, done = [], set()
+        for r in self.index.rows:
+            sig = tuple(sorted(r["k"].items()))
+            if sig in done:
+                continue
+            done.add(sig)
+            ret, whole = self.index.estimate(r["k"]), closes_index.estimate(r["k"])
+            if ret and whole and ret["grade"] in ("A", "B") and whole["grade"] in ("A", "B") and whole["median"]:
+                ratios.append(ret["median"] / whole["median"])
+        if len(ratios) >= self.p.get("min_ratio_pairs", 5):
+            return round(statistics.median(ratios), 2), len(ratios)
+        return default, len(ratios)
+
+    def estimate(self, k, wholesale=None):
+        """Retail band: own comps when there are enough, else wholesale x ratio. None if neither."""
+        own = self.index.estimate(k)
+        if own and own["grade"] in ("A", "B"):
+            return {**own, "basis": "retail comps"}
+        if wholesale and wholesale.get("grade") in ("A", "B"):
+            r = self.ratio
+            note = (f"measured on {self.ratio_pairs} models" if self.ratio_pairs >= self.p.get("min_ratio_pairs", 5)
+                    else "assumed, not measured: add your sales to retail_comps.csv")
+            return {**wholesale, "p25": round(wholesale["p25"] * r, 2), "median": round(wholesale["median"] * r, 2),
+                    "p75": round(wholesale["p75"] * r, 2), "basis": f"auction closes x {r:g} ({note})"}
+        return None

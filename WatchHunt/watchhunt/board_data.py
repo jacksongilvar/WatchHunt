@@ -2,7 +2,10 @@
 import time
 from datetime import datetime, timezone
 
-from closes import Closes, competition
+import json
+import os
+
+from closes import Closes, Retail, competition, retail_rows
 from economics import channel, numbers
 
 
@@ -104,11 +107,17 @@ def build_board(store, cfg):
     tracked = store.tracked(("active", "ended"))
     index = Closes([l for l, st, _ in tracked if st == "ended"], cfg["brands"], store.all_closes(),
                    families=cfg.get("families"), pricing=cfg.get("pricing"))
+    retail = Retail(retail_rows(cfg.get("pricing"), cfg["brands"], cfg.get("families")), index.index, cfg.get("pricing"))
+    calib = None
+    if os.path.exists("calibration.json"):  # written by backtest.py
+        with open("calibration.json") as f:
+            calib = json.load(f)
     now = datetime.now(timezone.utc)
     for lst, status, updated in tracked:
         ai = lst.ai or {}
         cl = index.lookup(lst)
-        e = numbers(lst, econ, cfg["brands"], cl)
+        rt = retail.estimate(index.key(lst), cl)
+        e = numbers(lst, econ, cfg["brands"], cl, rt, calib)
         hours = None
         if lst.end_time:
             try:

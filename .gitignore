@@ -6,3 +6,6 @@ site/
 .DS_Store
 __pycache__/
 env.txt
+watchhunt.db
+calibration.json
+backtest_report.*

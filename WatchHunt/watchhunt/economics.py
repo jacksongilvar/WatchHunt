@@ -19,12 +19,18 @@ from sizing import size_verdict
 
 
 
-def value_band(lst, econ, closes=None):
-    # Real closing prices for this brand and movement beat any estimate, including a hand-entered one.
+def value_band(lst, econ, closes=None, retail=None):
+    """What you can SELL it for (retail). Where auctions end (closes) is the price you compete against, not the
+    value: using it as the value means you only ever win auctions that end below the typical close."""
+    rt = retail or {}
+    if rt.get("p25") is not None:
+        return {"low": rt["p25"], "mid": rt["median"], "high": rt["p75"], "basis": "retail", "grade": rt.get("grade"),
+                "basis_note": f'Grade {rt.get("grade")}: {rt.get("basis")}, {rt["count"]} comps for {rt["match"]}'}
     cl = closes or {}
     if cl.get("grade") in ("A", "B") and cl.get("p25") is not None:
         return {"low": cl["p25"], "mid": cl["median"], "high": cl["p75"], "basis": "closes", "grade": cl["grade"],
-                "basis_note": f'Grade {cl["grade"]}: {cl["count"]} finished auctions for {cl["match"]} (what buyers actually paid)'}
+                "basis_note": f'Grade {cl["grade"]}: {cl["count"]} finished auctions for {cl["match"]}. '
+                              f'No retail data, so this assumes you sell at auction-close prices'}
     man = lst.manual or {}
     v = man.get("value")
     if isinstance(v, list) and len(v) == 2 and all(isinstance(x, (int, float)) for x in v) and max(v) > 0:
@@ -156,18 +162,30 @@ def channel(econ):
     return "custom", econ.get("sell_fee_pct", 15) / 100, econ.get("ship_out", 0)
 
 
-def numbers(lst, econ, brands=None, closes=None):
-    prem = econ.get("buyer_premium_pct", {}).get(lst.source, 0) / 100
+def win_chance(max_bid, expected_close, grade, calib):
+    """Share of past auctions (same grade) that closed at or below max_bid, scaled to this watch's expected close.
+    calib comes from backtest.py (calibration.json): {"ratios": {"A": [...], "B": [...]}} of actual / predicted."""
+    ratios = ((calib or {}).get("ratios") or {}).get(grade or "", [])
+    if not ratios or not expected_close or max_bid is None or len(ratios) < 20:
+        return None
+    limit = max_bid / expected_close
+    return round(sum(1 for r in ratios if r <= limit) / len(ratios), 2)
+
+
+def numbers(lst, econ, brands=None, closes=None, retail=None, calib=None):
+    # Sales tax: ShopGoodwill and eBay charge it on the item plus shipping. Skip it only with a resale certificate.
+    tax = econ.get("sales_tax_pct", 0) / 100
+    prem = econ.get("buyer_premium_pct", {}).get(lst.source, 0) / 100 + tax
     svc = service_estimate(lst, econ.get("service", {}), brands)
     service = svc["total"]
     ship_in = lst.shipping if lst.shipping is not None else econ.get("ship_in", 0)
     fr = econ.get("fake_risk", {})
     risky = risky_brand(lst, brands)
     auth = fr.get("authentication_cost", {}).get(risky, 0) if risky else 0
-    fixed = ship_in + service + auth
+    fixed = ship_in * (1 + tax) + service + auth
     all_in = lst.price * (1 + prem) + fixed
 
-    band = value_band(lst, econ, closes)
+    band = value_band(lst, econ, closes, retail)
     size = size_verdict(lst)
     # A hand-entered value assumes a men's watch unless the entry says otherwise. Cut it when the watch is women's.
     # AI ranges already price the size they see; sold and Lens bands come from matching watches.
@@ -189,7 +207,8 @@ def numbers(lst, econ, brands=None, closes=None):
            "watch_type": svc["type"], "value": band,
            "fake_risk": bool(risky), "genuine_chance": p, "genuine_steps": steps, "auth_cost": auth,
            "evidence_chance": evidence, "size": size, "closes": closes,
-           "expected_close": (closes or {}).get("median"), "claude_chance": claude_read(lst.ai, fr) if risky else None,
+           "expected_close": (closes or {}).get("median"), "close_grade": (closes or {}).get("grade"),
+           "claude_chance": claude_read(lst.ai, fr) if risky else None,
            "ship_in": ship_in, "ship_in_basis": "listing" if lst.shipping is not None else "estimate",
            "net_mid": None, "margin_pct": None, "max_bid": None}
     if not band:
@@ -215,6 +234,7 @@ def numbers(lst, econ, brands=None, closes=None):
     out["zone"] = zone(lst.price, out["max_bid"], out["breakeven_bid"])
     if out.get("expected_close") is not None:
         out["close_zone"] = zone(out["expected_close"], out["max_bid"], out["breakeven_bid"])
+        out["win_chance"] = win_chance(out["max_bid"], out["expected_close"], out["close_grade"], calib)
     return out
 
 
