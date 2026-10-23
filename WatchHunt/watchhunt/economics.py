@@ -165,7 +165,9 @@ def channel(econ):
 def win_chance(max_bid, expected_close, grade, calib):
     """Share of past auctions (same grade) that closed at or below max_bid, scaled to this watch's expected close.
     calib comes from backtest.py (calibration.json): {"ratios": {"A": [...], "B": [...]}} of actual / predicted."""
-    ratios = ((calib or {}).get("ratios") or {}).get(grade or "", [])
+    if grade not in ("A", "B"):
+        return None  # a C or D expected close is too rough to turn into odds
+    ratios = ((calib or {}).get("ratios") or {}).get(grade, [])
     if not ratios or not expected_close or max_bid is None or len(ratios) < 20:
         return None
     limit = max_bid / expected_close

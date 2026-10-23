@@ -123,7 +123,8 @@ def main():
         for src in sources:
             if hasattr(src, "closed_listings"):
                 n = 0
-                for iid, title, price, bids, ended in src.closed_listings(cfg["comps"].get("closed_pages", 2)):
+                for iid, title, price, bids, ended in src.closed_listings(cfg["comps"].get("closed_pages", 2),
+                                                                          cfg["comps"].get("harvest_queries")):
                     store.save_close(f"{src.name}:{iid}", src.name, title, price, bids, ended)
                     n += 1
                 store.commit()

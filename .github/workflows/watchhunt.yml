@@ -45,6 +45,7 @@ jobs:
         run: |
           if git fetch --depth 1 origin state 2>/dev/null; then
             { git show FETCH_HEAD:watchhunt.db > watchhunt.db 2>/dev/null || git show FETCH_HEAD:watchhunter.db > watchhunt.db; } && echo "State restored."
+            git show FETCH_HEAD:calibration.json > calibration.json 2>/dev/null || true
           else
             echo "No saved state yet (first run)."
           fi
@@ -61,6 +62,12 @@ jobs:
         if: github.event.schedule == '17 11,23 * * *' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'scan')
         run: python main.py
 
+      - name: Backtest prices (after each full scan)
+        if: github.event.schedule == '17 11,23 * * *' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'scan')
+        run: |
+          python backtest.py || echo "Backtest failed; the board keeps the last calibration."
+          mkdir -p site && cp backtest_report.md site/backtest.md 2>/dev/null || true
+
       - name: Check eBay connection
         run: python ebay_check.py
 
@@ -74,10 +81,12 @@ jobs:
         run: |
           mkdir -p /tmp/state && cp watchhunt.db /tmp/state/
           cp ebay_status.json /tmp/state/ 2>/dev/null || true
+          cp calibration.json /tmp/state/ 2>/dev/null || true
           cd /tmp/state
           git init -q -b state
           git add watchhunt.db
           git add ebay_status.json 2>/dev/null || true
+          git add calibration.json 2>/dev/null || true
           git -c user.name="watchhunt-bot" -c user.email="watchhunt-bot@users.noreply.github.com" \
               commit -qm "state $(date -u +%Y-%m-%dT%H:%MZ)"
           git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" state

@@ -44,6 +44,11 @@ comps:
   shopgoodwill_sold: true    # look up recent ShopGoodwill sold prices for AI-identified watches
   harvest_closes: true       # record finished ShopGoodwill auctions for every search as real price comps
   closed_pages: 2            # pages of 40 per search per scan
+  # Searches used ONLY to collect price comps (not to find watches to buy). More comps = more A and B grades.
+  # Each one adds about 2 requests per scan. Pick the models you buy and the ones you sell next to them.
+  harvest_queries: [seiko 5, seiko diver, seiko quartz, seiko kinetic, seiko solar, seiko chronograph,
+                    citizen eco-drive, citizen promaster, citizen automatic, hamilton automatic, hamilton khaki,
+                    bulova, orient automatic, gucci watch, tissot, seiko ladies, citizen ladies]
 
 ebay:
   enabled: true

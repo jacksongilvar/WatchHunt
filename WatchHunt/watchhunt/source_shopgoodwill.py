@@ -145,10 +145,11 @@ class ShopGoodwillSource:
         time.sleep(self.search_cfg.get("polite_delay_seconds", 2))
         return listing
 
-    def closed_listings(self, pages=2):
-        """Finished auctions for every configured query: (item_id, title, final price, bids, end time)."""
+    def closed_listings(self, pages=2, extra_queries=()):
+        """Finished auctions for every configured query, plus comps-only queries (comps.harvest_queries):
+        (item_id, title, final price, bids, end time)."""
         seen = set()
-        for q, _ in query_items(self.cfg["queries"], 999999):
+        for q, _ in query_items(list(self.cfg["queries"]) + list(extra_queries or []), 999999):
             for page in range(1, pages + 1):
                 try:
                     j = self._post(_body(q, page=page, page_size=40, closed=True))
