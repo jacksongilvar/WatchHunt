@@ -247,7 +247,7 @@ families:
     - [recraft, [recraft]]
     - [hi-beat, [hi beat, hibeat]]
     - [kinetic, [kinetic]]
-    - [6a3x perpetual dress, [6a32*, 6a34*, 6a36*]]
+    - [6a3x perpetual dress, [6a32*, 6a34*, 6a36*, snq*]]
     - [quartz perpetual, [8f32*, 8f33*, 8f35*, 8f56*, 4f32*, 4f56*]]
     - [seiko 5, [seiko 5, snk*, snx*, snzf*, 7s26*, 7s36*, 6309*, 7009*]]
     - [diver, [diver, divers, 200m, 150m]]
@@ -437,7 +437,7 @@ watchlist:
   - {id: 280139516, max_bid: 30, shipping: 15, value: [70, 90], service: 0, basis: "Poshmark vintage Seiko automatic sold median $87", note: "Seiko 6309-8019 17J, 1980s"}
   - {id: 280353760, max_bid: 25, shipping: 15, value: [60, 90], service: 0, basis: "Estimate, vintage Seiko date automatic as-is", note: "Seiko Automatic 17J Perpetual Calendar dial, working, crystal blemish (may need crystal)"}
   - {id: 280321828, max_bid: 30, shipping: 15, value: [70, 100], service: 0, basis: "Estimate, Seiko 5 Actus as-is", note: "Seiko 5 Actus automatic, runs, light wear. Check dial/caseback match"}
-  - {id: 281346630, max_bid: 50, value: [120, 170], service: 20, basis: "6A32 ShopGoodwill closes $83 to $177 (Jul to Oct 2026), several sold for repair. This one is unworn with box, papers and tags. Estimate, unverified", note: "Seiko 6A32 perpetual, two-tone, black dial, complete set, unworn. Battery only: set the calendar yourself from the included booklet. Bid once, late"}
+  - {id: 281346630, max_bid: 45, value: [100, 150], service: 20, basis: "14 eBay sold two-tone 6A32 (Terapeak, Dec 2025 to Sep 2026): fixed price $60 to $190, typical $100; auctions $51 to $70. Box and papers put it in the top half", note: "Seiko 6A32 perpetual, two-tone, black dial, complete set, unworn. Battery only: set the calendar yourself from the included booklet. Sell fixed price on eBay with box and papers in the photos. Bid once, late"}
   - {id: 281467656, wearer: ladies, max_bid: 35, value: [90, 150], service: 20, basis: "Estimate for a running single-bezel 1100L bangle, no Terapeak comps yet, unverified", note: "Gucci 1100L bangle, burgundy bezel, white dial. Check bangle size letter, bends and inner plating wear. One bezel only: full bezel sets sell much higher. Caseback should read 11/12 or 1100L. Needs a battery. Bid once, late"}
   - {id: 281051129, wearer: ladies, max_bid: 40, value: [105, 150], service: 20, basis: "20 eBay sold 3000.2.L (Terapeak, Oct 2025 to Oct 2026): web stripe dials $105 to $183, typical $130", note: "Gucci 3000.2.L web stripe (Sherry) dial, Roman bezel. Caseback crest and 3000.2.L engraving look right, serial not seen. Goodwill authentication card. Check strap buckle: keep if Gucci-signed. Needs a battery. Bid once, late"}
   - {id: 281150804, wearer: ladies, max_bid: 25, value: [85, 110], service: 20, basis: "Plain-dial 3000.2.L eBay sales $80 to $160, typical $95. Raise max to $40 only if the dial has the green-red-green stripe", note: "Gucci Sherry Line, black Roman dial. Sherry Line may mean lug or strap accents, not the striped dial: check photos. Confirm caseback model. Needs a battery. Bid once, late"}
