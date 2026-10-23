@@ -70,6 +70,13 @@ def build_sources(cfg, wanted, debug):
     if "shopgoodwill" in wanted and cfg["shopgoodwill"].get("enabled"):
         from source_shopgoodwill import ShopGoodwillSource
         sources.append(ShopGoodwillSource(cfg["shopgoodwill"], s, debug))
+    if "inbox" in wanted and (cfg.get("inbox") or {}).get("enabled"):
+        user, pw = os.getenv("INBOX_USER"), os.getenv("INBOX_PASS")
+        if user and pw:
+            from source_inbox import InboxSource
+            sources.append(InboxSource(cfg["inbox"], user, pw))
+        else:
+            print("! Inbox skipped: set INBOX_USER and INBOX_PASS")
     if "propertyroom" in wanted and cfg["propertyroom"].get("enabled"):
         from source_propertyroom import PropertyRoomSource
         sources.append(PropertyRoomSource(cfg["propertyroom"], s, price_ceiling(cfg)))
@@ -79,7 +86,7 @@ def build_sources(cfg, wanted, debug):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="config.yaml")
-    ap.add_argument("--sources", default="ebay,shopgoodwill,propertyroom")
+    ap.add_argument("--sources", default="ebay,shopgoodwill,propertyroom,inbox")
     ap.add_argument("--no-ai", action="store_true")
     ap.add_argument("--include-seen", action="store_true")
     ap.add_argument("--debug", action="store_true")
@@ -107,7 +114,9 @@ def main():
                 continue
             score_listing(lst, cfg)
             # Rolex, Cartier and Tudor get a higher ceiling (brands.<name>.max_price); everything else uses search.max_price.
-            if not (s["min_price"] <= lst.price <= price_ceiling(cfg, lst.brand_hint)):
+            # Alert emails sometimes carry no price (0): keep those, the link is what matters.
+            if not (s["min_price"] <= lst.price <= price_ceiling(cfg, lst.brand_hint)) and \
+                    not (src.name == "inbox" and lst.price == 0):
                 continue
             n_new += 1
             store.save(lst)  # mark seen even if low score, so it is not re-scored daily
@@ -192,6 +201,11 @@ def main():
         store.commit()
 
     for lst in candidates:
+        from_inbox = by_source[lst.key].name == "inbox"
+        if from_inbox and not lst.image_urls:
+            store.track(lst)  # you saved this search, so it goes on the board; no photos to check
+            text_only.append(lst)
+            continue
         if vision and budget > 0 and (lst.score >= cfg["scoring"]["min_score_for_ai"] or is_high_risk(cfg, lst.brand_hint) or always_ai(cfg, lst)):
             print(f"  AI: {lst.title[:70]}")
             check(lst, by_source[lst.key])

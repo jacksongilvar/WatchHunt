@@ -38,6 +38,8 @@ jobs:
       SMTP_USER: ${{ secrets.SMTP_USER }}
       SMTP_PASS: ${{ secrets.SMTP_PASS }}
       DIGEST_TO: ${{ secrets.DIGEST_TO }}
+      INBOX_USER: ${{ secrets.INBOX_USER }}
+      INBOX_PASS: ${{ secrets.INBOX_PASS }}
     steps:
       - uses: actions/checkout@v4
 

@@ -80,7 +80,7 @@ def refresh_bids(store, cfg):
     if added:
         print(f"Added {added} watchlist items to the board.")
     checked = 0
-    for lst, status, _ in store.tracked(("active", "ended")):
+    for lst, status, _ in store.tracked(("active", "ended")):  # _ is when the row was last updated
         if lst.source == "shopgoodwill":
             from source_shopgoodwill import to_utc
             lst.end_time = to_utc(lst.end_time)
@@ -88,6 +88,10 @@ def refresh_bids(store, cfg):
             continue  # genuinely over; earlier versions could mark live auctions ended by mistake
         src = sources.get(lst.source)
         if not src or not hasattr(src, "refresh"):
+            # Alert-email listings can't be re-checked (WatchHunt doesn't visit those sites); drop them after a week.
+            if status == "active" and lst.seller == "email alert" and (datetime.now(timezone.utc) -
+                    datetime.fromisoformat(_.replace("Z", "+00:00"))).days >= cfg.get("inbox", {}).get("keep_days", 7):
+                store.set_status(lst.key, "ended")
             continue
         try:
             alive = src.refresh(lst)
