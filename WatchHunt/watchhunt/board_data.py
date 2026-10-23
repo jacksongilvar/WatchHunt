@@ -2,7 +2,8 @@
 import time
 from datetime import datetime, timezone
 
-from economics import numbers
+from closes import Closes, competition
+from economics import channel, numbers
 
 
 def _ended_by_clock(lst):
@@ -100,8 +101,21 @@ def refresh_bids(store, cfg):
 def build_board(store, cfg):
     econ = cfg["economics"]
     rows = []
-    for lst, status, updated in store.tracked(("active", "ended")):
+    tracked = store.tracked(("active", "ended"))
+    index = Closes([l for l, st, _ in tracked if st == "ended"], cfg["brands"], store.all_closes())
+    now = datetime.now(timezone.utc)
+    for lst, status, updated in tracked:
         ai = lst.ai or {}
+        cl = index.lookup(lst, cfg["brands"], econ.get("min_closes", 3))
+        e = numbers(lst, econ, cfg["brands"], cl)
+        hours = None
+        if lst.end_time:
+            try:
+                end = datetime.fromisoformat(lst.end_time.replace("Z", "+00:00"))
+                hours = ((end if end.tzinfo else end.replace(tzinfo=timezone.utc)) - now).total_seconds() / 3600
+            except ValueError:
+                pass
+        e["competition"] = competition(lst, e.get("watch_type"), hours, cfg.get("competition")) if status == "active" else None
         rows.append({
             "key": lst.key, "status": status, "updated": updated,
             "source": lst.source, "title": lst.title, "url": lst.url,
@@ -113,7 +127,7 @@ def build_board(store, cfg):
             "concern": ai.get("authenticity_concern") if ai else None,
             "flags": ai.get("visible_red_flags", []) if ai else [],
             "summary": ai.get("summary", "") if ai else "; ".join(lst.reasons),
-            "econ": numbers(lst, econ, cfg["brands"]),
+            "econ": e,
             "market": lst.market,
             "lens_guess": (lst.lens or {}).get("best_guess"),
             "replicas": {"count": (lst.lens or {}).get("replica_count", 0), "share": (lst.lens or {}).get("replica_share", 0),
@@ -126,6 +140,8 @@ def build_board(store, cfg):
         })
     return {
         "rows": rows,
-        "assumptions": {k: econ[k] for k in ("target_margin_pct", "sell_fee_pct", "ship_in", "ship_out")},
+        "assumptions": {"target_margin_pct": econ.get("target_margin_pct"), "ship_in": econ.get("ship_in"),
+                        "channel": channel(econ)[0], "sell_fee_pct": round(channel(econ)[1] * 100),
+                        "ship_out": channel(econ)[2]},
         "refresh_minutes": cfg.get("dashboard", {}).get("refresh_minutes", 10),
     }

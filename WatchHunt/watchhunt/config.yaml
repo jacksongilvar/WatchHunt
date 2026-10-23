@@ -42,6 +42,8 @@ lens:
 
 comps:
   shopgoodwill_sold: true    # look up recent ShopGoodwill sold prices for AI-identified watches
+  harvest_closes: true       # record finished ShopGoodwill auctions for every search as real price comps
+  closed_pages: 2            # pages of 40 per search per scan
 
 ebay:
   enabled: true
@@ -217,9 +219,16 @@ dashboard:
 # Cost assumptions behind "net margin" and "max bid". VERIFY these; they drive every number.
 economics:
   target_margin_pct: 30    # max bid is the highest price that still clears this margin at the LOW value estimate
-  sell_fee_pct: 15         # marketplace + payment fees where you resell
   ship_in: 15              # what you pay to receive it
-  ship_out: 20             # insured shipping to your buyer
+  # Where you sell decides fees and outbound shipping. channel picks one of channels below.
+  channel: local
+  channels:
+    local:    {sell_fee_pct: 0,  ship_out: 0}    # Facebook Marketplace, OfferUp, in person
+    ebay:     {sell_fee_pct: 15, ship_out: 20}   # final value fee + payment, insured shipping you pay
+    poshmark: {sell_fee_pct: 20, ship_out: 0}    # buyer pays the shipping label
+  sell_fee_pct: 15         # used only if channel is missing
+  ship_out: 20
+  min_closes: 3            # tracked auction finals for the same brand and movement needed to price from them
   buyer_premium_pct: {ebay: 0, shopgoodwill: 0, propertyroom: 0}   # check each site's current terms
   # Service: what it costs to get a watch ready to sell, priced job by job (see service.py).
   # cost is [everyday brands, mid Swiss, luxury] by brands.<name>.tier. Unknown brands count as everyday.
@@ -290,6 +299,14 @@ economics:
 # their bids refresh like everything else. shipping = what you pay to receive it.
 # value = [low, high] resale or melt you expect, service = repair cost before selling (0 if none). Add a line with an item id from the listing URL.
 # wearer: ladies = your value already assumes a women's watch, so the women's cut is not applied again.
+# Signs that few people are bidding: shown as a QUIET badge and the "Low competition" filter.
+competition:
+  late_hours: 6            # within this many hours of the end...
+  max_bids_late: 2         # ...with this many bids or fewer
+  quiet_hours_et: [6, 15]  # ShopGoodwill closes between 6am and 3pm ET draw fewer bidders
+  utc_offset_hours: 4      # Eastern daylight time (use 5 in winter)
+  min_signals: 2           # other signals needed together (misspelled, vague title, untested quartz, daytime close)
+
 watchlist:
   - {id: 279454050, wearer: ladies, max_bid: 150, shipping: 5, value: [220, 380], service: 0, basis: "18K case melt plus resale as a running Omega, unverified", note: "Omega ladies 18K case, running. Bracelet likely gold-filled"}
   - {id: 279233878, wearer: ladies, max_bid: 110, shipping: 5, value: [180, 300], service: 0, basis: "14K case melt plus resale as a running Omega, unverified", note: "Omega ladies 14K white gold case, running, 8.6g total"}

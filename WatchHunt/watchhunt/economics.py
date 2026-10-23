@@ -19,7 +19,12 @@ from sizing import size_verdict
 
 
 
-def value_band(lst, econ):
+def value_band(lst, econ, closes=None):
+    # Real closing prices for this brand and movement beat any estimate, including a hand-entered one.
+    cl = closes or {}
+    if cl.get("level") == "exact" and cl.get("count", 0) >= econ.get("min_closes", 3) and cl.get("p25") is not None:
+        return {"low": cl["p25"], "mid": cl["median"], "high": cl["p75"], "basis": "closes",
+                "basis_note": f'{cl["count"]} WatchHunt-tracked auctions for {cl["match"]} (what buyers actually paid)'}
     man = lst.manual or {}
     v = man.get("value")
     if isinstance(v, list) and len(v) == 2 and all(isinstance(x, (int, float)) for x in v) and max(v) > 0:
@@ -142,7 +147,16 @@ def claude_read(ai, fr=None):
     return min(float(est), (fr or {}).get("max_chance", 0.9))
 
 
-def numbers(lst, econ, brands=None):
+def channel(econ):
+    """Selling fees and outbound shipping for the channel you sell through (economics.channel)."""
+    name = econ.get("channel")
+    ch = (econ.get("channels") or {}).get(name) if name else None
+    if ch:
+        return name, ch.get("sell_fee_pct", 0) / 100, ch.get("ship_out", 0)
+    return "custom", econ.get("sell_fee_pct", 15) / 100, econ.get("ship_out", 0)
+
+
+def numbers(lst, econ, brands=None, closes=None):
     prem = econ.get("buyer_premium_pct", {}).get(lst.source, 0) / 100
     svc = service_estimate(lst, econ.get("service", {}), brands)
     service = svc["total"]
@@ -153,7 +167,7 @@ def numbers(lst, econ, brands=None):
     fixed = ship_in + service + auth
     all_in = lst.price * (1 + prem) + fixed
 
-    band = value_band(lst, econ)
+    band = value_band(lst, econ, closes)
     size = size_verdict(lst)
     # A hand-entered value assumes a men's watch unless the entry says otherwise. Cut it when the watch is women's.
     # AI ranges already price the size they see; sold and Lens bands come from matching watches.
@@ -174,14 +188,15 @@ def numbers(lst, econ, brands=None):
     out = {"all_in": round(all_in, 2), "service": service, "service_jobs": svc["jobs"], "service_basis": svc["basis"],
            "watch_type": svc["type"], "value": band,
            "fake_risk": bool(risky), "genuine_chance": p, "genuine_steps": steps, "auth_cost": auth,
-           "evidence_chance": evidence, "size": size, "claude_chance": claude_read(lst.ai, fr) if risky else None,
+           "evidence_chance": evidence, "size": size, "closes": closes,
+           "expected_close": (closes or {}).get("median"), "claude_chance": claude_read(lst.ai, fr) if risky else None,
            "ship_in": ship_in, "ship_in_basis": "listing" if lst.shipping is not None else "estimate",
            "net_mid": None, "margin_pct": None, "max_bid": None}
     if not band:
         return out
 
-    fee = econ.get("sell_fee_pct", 15) / 100
-    ship_out = econ.get("ship_out", 0)
+    ch_name, fee, ship_out = channel(econ)
+    out["channel"] = ch_name
 
     def net_at(v):
         return v * (1 - fee) - ship_out - all_in

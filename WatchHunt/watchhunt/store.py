@@ -25,6 +25,8 @@ class Store:
         CREATE TABLE IF NOT EXISTS prices (
             key TEXT, ts TEXT, price REAL, bids INTEGER);
         CREATE INDEX IF NOT EXISTS prices_key ON prices(key);
+        CREATE TABLE IF NOT EXISTS closes (
+            key TEXT PRIMARY KEY, source TEXT, title TEXT, price REAL, bids INTEGER, ended TEXT, seen_at TEXT);
         """)
         self.db.commit()
 
@@ -77,6 +79,15 @@ class Store:
                                (lst.key,)).fetchone()
         if last is None or last[0] != lst.price or last[1] != lst.bids:
             self.db.execute("INSERT INTO prices VALUES (?,?,?,?)", (lst.key, _now(), lst.price, lst.bids))
+
+    # --- closes (finished auctions harvested from the sites' closed-search, used as real price comps) ---
+    def save_close(self, key, source, title, price, bids, ended):
+        with _lock:
+            self.db.execute("INSERT OR REPLACE INTO closes VALUES (?,?,?,?,?,?,?)",
+                            (key, source, title, price, bids, ended, _now()))
+
+    def all_closes(self):
+        return self.db.execute("SELECT key, source, title, price, bids, ended FROM closes").fetchall()
 
     def commit(self):
         with _lock:

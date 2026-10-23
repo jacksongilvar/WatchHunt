@@ -118,6 +118,16 @@ def main():
         stats[src.name] = f"{n_total} fetched, {n_new} new"
         print(f"  {n_total} fetched, {n_new} new")
     store.commit()
+    # Harvest finished auctions as real price comps (closes table), so values come from what buyers actually paid.
+    if cfg.get("comps", {}).get("harvest_closes"):
+        for src in sources:
+            if hasattr(src, "closed_listings"):
+                n = 0
+                for iid, title, price, bids, ended in src.closed_listings(cfg["comps"].get("closed_pages", 2)):
+                    store.save_close(f"{src.name}:{iid}", src.name, title, price, bids, ended)
+                    n += 1
+                store.commit()
+                print(f"  {src.name}: recorded {n} finished auctions as price comps")
     # Fake-risk brands (Rolex, Cartier, Tudor) go first so they get the AI and Lens budget.
     candidates.sort(key=lambda l: (not is_high_risk(cfg, l.brand_hint), -l.score))
     stats["flagged"] = len(candidates)
