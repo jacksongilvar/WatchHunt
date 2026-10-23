@@ -20,6 +20,7 @@ ai:
   enabled: true
   model: claude-sonnet-5-5   # any Claude model with vision
   max_listings_per_run: 25   # hard cap on AI calls per run (cost control)
+  luxury_per_run: 6          # of those, at most this many go to Rolex/Cartier/Tudor; the rest go to your core watches
   max_images_per_listing: 4
   max_images_high_risk: 8    # Rolex, Cartier, Tudor: more photos (caseback, clasp, rehaut) to check for fakes
   max_tokens: 8000           # output room per check. Luxury-brand checklists are long; 3000 cut them off
@@ -108,6 +109,9 @@ shopgoodwill:
     - seiko perpetual
     - seiko 8f
     - citizen perpetual
+    - citizen eco-drive
+    - citizen automatic
+    - hamilton watch
     - seiko 6a32
     - gucci watch
     - gucci 3000
@@ -226,6 +230,8 @@ brands:
   tag heuer:        {tier: 2, fake_risk: true, also: [], misspellings: [tag hauer, tag huer]}
   seiko:            {tier: 1, also: [], misspellings: [sieko, seico, seko, seikko]}
   hamilton:         {tier: 1, also: [], misspellings: [hamiltion]}
+  citizen:          {tier: 1, also: [eco-drive, eco drive, promaster], misspellings: [citzen, citzien, citizn]}
+  gucci:            {tier: 1, misspellings: [guci, guccci]}
   bulova:           {tier: 1, also: [accutron], misspellings: [bulvoa, bolova]}
   gruen:            {tier: 1, also: [], misspellings: []}
 
@@ -418,6 +424,26 @@ competition:
   quiet_hours_et: [6, 15]  # ShopGoodwill closes between 6am and 3pm ET draw fewer bidders
   utc_offset_hours: 4      # Eastern daylight time (use 5 in winter)
   min_signals: 2           # other signals needed together (misspelled, vague title, untested quartz, daytime close)
+
+# The buying funnel (funnel.py): leads -> qualified -> priced -> hot -> action. Nothing here bids.
+funnel:
+  core_brands: [seiko, citizen, hamilton, gucci]   # what you buy now; Rolex/Cartier/Tudor run in a separate lane
+  ladies_ok_brands: [gucci]                        # women's watches are rejected except for these brands
+  gold_ok_brands: [gucci]                          # gold-tone is normal for vintage Gucci, so no penalty there
+  max_price_core: 150        # current price above this is rejected for core brands
+  max_price_luxury: 1500
+  min_fit: 4                 # fit score needed to qualify (starts at 5; gold-tone -2, two-tone -1, small -1, men's/steel/etc +1)
+  priority_hours: 48         # qualified listings ending within this many hours get AI-checked first
+  hot_hours: 48              # priced, under max bid and ending within this many hours = hot
+  keep_days: 10
+  reject_words: {}           # add your own, e.g. {"tank": "barrel-tank redials"}
+  # The board says "in testing" until the funnel has caught this share of the watches you'd bid on (data/miss_log.csv).
+  trust_min_entries: 10
+  trust_catch_rate: 0.9
+# Your stock. Update holding when you buy or sell; the board turns "hot" into "action" only for open slots.
+capacity:
+  max_holding: 4
+  holding: 3                 # perpetual calendar, tiger eye, Gucci 7900M
 
 watchlist:
   - {id: 281003615, max_bid: 45, shipping: 13, note: "Gucci men's round gold-tone quartz, champagne Roman dial, blue hands, CoA. Check caseback model and plating wear"}

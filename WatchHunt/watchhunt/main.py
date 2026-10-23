@@ -15,6 +15,7 @@ import yaml
 from dotenv import load_dotenv
 
 import digest
+from funnel import qualify
 from heuristics import score_listing
 from lens import Lens, hint_text, market
 from models import price_ceiling
@@ -102,6 +103,7 @@ def main():
         sys.exit("No sources enabled.")
 
     # 1. Fetch and score
+    lead_src = {}
     by_source = {}
     candidates = []
     stats = {}
@@ -110,9 +112,13 @@ def main():
         n_total = n_new = 0
         for lst in src.fetch():
             n_total += 1
+            # Every listing is a lead, seen before or not: its price and bids change, and the funnel re-sorts it.
+            score_listing(lst, cfg)
+            verdict = qualify(lst, cfg)
+            store.save_lead(lst, verdict)
+            lead_src[lst.key] = src
             if not args.include_seen and store.is_seen(lst.key):
                 continue
-            score_listing(lst, cfg)
             # Rolex, Cartier and Tudor get a higher ceiling (brands.<name>.max_price); everything else uses search.max_price.
             # Alert emails sometimes carry no price (0): keep those, the link is what matters.
             if not (s["min_price"] <= lst.price <= price_ceiling(cfg, lst.brand_hint)) and \
@@ -138,9 +144,34 @@ def main():
                     n += 1
                 store.commit()
                 print(f"  {src.name}: recorded {n} finished auctions as price comps")
-    # Fake-risk brands (Rolex, Cartier, Tudor) go first so they get the AI and Lens budget.
-    candidates.sort(key=lambda l: (not is_high_risk(cfg, l.brand_hint), -l.score))
+    store.prune_leads(cfg.get("funnel", {}).get("keep_days", 10))
+    store.commit()
+    # Funnel: qualified leads not yet on the board get the AI checks, whether or not they were seen before.
+    # Core watches (the ones you buy) get most of the budget; Rolex/Cartier/Tudor get a small separate slice.
+    on_board = {l.key for l, _, _ in store.tracked(("active", "ended"))}
+    from heuristics import _hours_left
+    fq = []
+    for lst, v in store.leads(("qualified",)):
+        if lst.key in on_board or lst.key not in lead_src:
+            continue
+        h = _hours_left(lst)
+        if h is not None and h < 0:
+            continue
+        lst.reasons = (lst.reasons or []) + ["funnel: " + ", ".join(v["reasons"][:3])]
+        fq.append((v, h, lst))
+    soon = cfg.get("funnel", {}).get("priority_hours", 48)
+    fq.sort(key=lambda t: (not (t[1] is not None and t[1] <= soon), -t[0]["fit"], t[1] if t[1] is not None else 1e9))
+    lux_budget = cfg["ai"].get("luxury_per_run", 6)
+    funnel_core = [t[2] for t in fq if t[0]["lane"] == "core"]
+    funnel_lux = [t[2] for t in fq if t[0]["lane"] == "luxury"][:lux_budget]
+    inbox_c = [l for l in candidates if by_source[l.key].name == "inbox"]
+    candidates = inbox_c + funnel_core + funnel_lux
+    for l in candidates:
+        by_source.setdefault(l.key, lead_src.get(l.key))
+    stats["leads"] = len(lead_src)
+    stats["qualified"] = len(fq)
     stats["flagged"] = len(candidates)
+    print(f"  Funnel: {len(lead_src)} leads, {len(fq)} qualified and not yet checked")
 
     # 2. Enrich and AI-check the best candidates
     ai_checked, text_only = [], []
@@ -206,7 +237,7 @@ def main():
             store.track(lst)  # you saved this search, so it goes on the board; no photos to check
             text_only.append(lst)
             continue
-        if vision and budget > 0 and (lst.score >= cfg["scoring"]["min_score_for_ai"] or is_high_risk(cfg, lst.brand_hint) or always_ai(cfg, lst)):
+        if vision and budget > 0:
             print(f"  AI: {lst.title[:70]}")
             check(lst, by_source[lst.key])
             ai_checked.append(lst)

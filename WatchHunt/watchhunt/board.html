@@ -107,6 +107,27 @@ main{max-width:var(--wrap);margin:0 auto;padding:0 20px 60px}
 .detail ul{margin:4px 0 0;padding-left:18px}
 .detail .actions{display:flex;flex-wrap:wrap;gap:8px;align-items:start}
 .vrange{white-space:nowrap}
+.funnel{max-width:var(--wrap);margin:0 auto;padding:0 20px 12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.funnel button{font:500 13px var(--text);color:var(--steel);background:var(--dial-2);border:1px solid var(--rule);border-radius:10px;padding:8px 12px;cursor:pointer;text-align:left;line-height:1.15}
+.funnel button b{display:block;font:600 20px/1.1 var(--figures)}
+.funnel button.on{border-color:var(--brass);background:var(--brass-soft)}
+.funnel .arrow{color:var(--muted);font-size:14px}
+.funnel .act b{color:var(--lume)} .funnel .full b{color:var(--oxblood)}
+.testing{max-width:var(--wrap);margin:0 auto 12px;padding:8px 20px;color:var(--brass);font-size:13.5px}
+.testing a{color:var(--steel)}
+@media (max-width:600px){
+  .funnel{flex-wrap:nowrap;overflow-x:auto;padding:0 16px 10px;scrollbar-width:none}
+  .funnel::-webkit-scrollbar{display:none}
+  .funnel button{flex:none;padding:6px 10px;font-size:12px}
+  .funnel button b{font-size:17px}
+  .testing{padding:4px 16px 8px;font-size:12.5px}
+}
+.lead{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--rule);color:var(--steel);text-decoration:none}
+.lead img{width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid var(--rule);background:var(--dial-2)}
+.lead .why{font-size:12.5px;color:var(--muted)}
+.lead .num{font:500 16px var(--figures)}
+.miss.ok .stage{color:var(--lume)} .miss.no .stage{color:var(--oxblood)}
+.badge-act{display:inline-block;margin-right:6px;padding:0 6px;border-radius:999px;background:var(--lume);color:#0b1220;font-size:11px;font-weight:700;vertical-align:2px}
 .assume summary{cursor:pointer;color:var(--steel);font-size:13px;list-style:none}
 .assume summary::-webkit-details-marker{display:none}
 .assume summary::before{content:"\24D8  "}
@@ -191,14 +212,20 @@ main{max-width:var(--wrap);margin:0 auto;padding:0 20px 60px}
   <div class="status" id="status" aria-live="polite">Loading…</div>
 </header>
 <div class="err" id="err" hidden></div>
+<nav class="funnel" id="funnel" aria-label="Buying funnel"></nav>
+<div class="testing" id="testing" hidden></div>
 <div class="controls">
   <div class="seg" role="group" aria-label="Filter">
-    <button data-f="all" aria-pressed="true">All live</button>
+    <button data-f="hot" aria-pressed="true">🔥 Hot<span class="cnt" id="cntHot"></span></button>
+    <button data-f="all" aria-pressed="false">All priced</button>
     <button data-f="new" aria-pressed="false">New<span class="cnt" id="cntNew"></span></button>
     <button data-f="bidding" aria-pressed="false">★ Bidding<span class="cnt" id="cntBid"></span></button>
     <button data-f="soon" aria-pressed="false">Ending in 24h</button>
     <button data-f="clears" aria-pressed="false">Under max bid</button>
     <button data-f="quiet" aria-pressed="false">Low competition<span class="cnt" id="cntQuiet"></span></button>
+    <button data-f="waiting" aria-pressed="false">Waiting<span class="cnt" id="cntWait"></span></button>
+    <button data-f="rejected" aria-pressed="false">Rejected<span class="cnt" id="cntRej"></span></button>
+    <button data-f="misses" aria-pressed="false">Miss log</button>
     <button data-f="ended" aria-pressed="false">Ended</button>
   </div>
   <div class="seg" role="group" aria-label="Sort">
@@ -225,7 +252,7 @@ const money = v => v == null ? "–" : (v < 0 ? "−$" : "$") + Math.abs(v).toLo
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const CONCERN = {none_visible:["var(--lume)","No visible red flags (not proof)"], some:["var(--brass)","Some concerns"],
                  high:["var(--oxblood)","High fake risk"], cannot_assess:["var(--muted)","Photos too poor to judge"]};
-let data = {rows:[]}, filter = "all", sort = "margin", prevPrice = {}, openKeys = new Set();
+let data = {rows:[]}, filter = "hot", sort = "margin", prevPrice = {}, openKeys = new Set();
 const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
 const HIDDEN_KEY = "wh-hidden", SEEN_KEY = "wh-seen", BID_KEY = "wh-bidding";
 function getSet(k){ try { return new Set(JSON.parse(localStorage.getItem(k) || "[]")); } catch(e){ return new Set(); } }
@@ -345,7 +372,7 @@ function row(r){
   return `<details class="row ${r.status}${bidding ? " bidding" : ""}" data-key="${esc(r.key)}" ${openKeys.has(r.key) ? "open" : ""}>
   <summary>
     <div class="c-watch watch">${r.image ? `<img src="${esc(r.image)}" alt="" loading="lazy">` : `<img alt="">`}
-      <div class="t"><div class="name"><button class="star${bidding ? " on" : ""}" data-bid="${esc(r.key)}" aria-pressed="${bidding}" title="${bidding ? "Remove from Bidding" : "Mark as bidding"}">${bidding ? "★" : "☆"}</button>${isNew ? `<span class="badge-new">NEW</span>` : ""}${sizeBadge(r)}${quietBadge(r)}${esc(r.name || r.title)}</div>
+      <div class="t"><div class="name"><button class="star${bidding ? " on" : ""}" data-bid="${esc(r.key)}" aria-pressed="${bidding}" title="${bidding ? "Remove from Bidding" : "Mark as bidding"}">${bidding ? "★" : "☆"}</button>${isNew ? `<span class="badge-new">NEW</span>` : ""}${(data.funnel && (data.funnel.action || []).includes(r.key)) ? `<span class="badge-act">ACT</span>` : ""}${sizeBadge(r)}${quietBadge(r)}${esc(r.name || r.title)}</div>
       <div class="sub"><span class="concern" style="background:${cc}" title="${cl}"></span>${esc(r.source)}${r.reference ? " " + esc(r.reference) : ""}${r.era ? ", " + esc(r.era) : ""}</div></div></div>
     <div class="c-price num"><div class="fig${flashed}">${money(r.price)}</div><div class="small">${r.bids != null ? r.bids + " bids" : "buy now"}</div></div>
     <div class="c-ends num"><div class="fig" data-left="${esc(r.key)}">${r.status === "ended" ? "Ended" : fmtLeft(h)}</div></div>
@@ -369,6 +396,38 @@ function row(r){
   </div></details>`;
 }
 let SEEN = new Set(), BIDS = new Set();
+function funnelBar(){
+  const F = data.funnel; if (!F) { $("#funnel").innerHTML = ""; return; }
+  const b = (f, n, label, cls = "") => `<button data-f="${f}" class="${cls}${filter === f ? " on" : ""}"><b>${n}</b>${label}</button>`;
+  const arrow = `<span class="arrow">→</span>`;
+  const act = (F.action || []).length;
+  $("#funnel").innerHTML = b("rejected", F.leads, "leads") + arrow + b("waiting", F.qualified, "qualified") + arrow +
+    b("all", F.priced, "priced") + arrow + b("hot", F.hot, "hot") + arrow +
+    b("hot", F.slots === 0 ? "Full" : `${act}`, F.slots === 0 ? `${F.holding}/${F.max_holding} held: sell first` : `to act on (${F.slots} slot${F.slots > 1 ? "s" : ""} open)`, F.slots === 0 ? "full" : "act");
+  const m = F.misses || {};
+  $("#testing").hidden = !F.testing;
+  if (F.testing) $("#testing").innerHTML = `<b>In testing.</b> The funnel has caught ${m.caught || 0} of ${m.total || 0} watches you found worth bidding on by hand. Keep browsing too until it catches at least 9 in 10. <a href="#" data-f="misses">See the miss log</a>.`;
+}
+function leadList(kind){
+  const F = data.funnel || {};
+  if (kind === "misses") {
+    const m = F.misses || {entries: []};
+    if (!m.entries.length) return `<p class="empty">No finds logged yet. Send a listing you found by hand and it gets logged here with how far the funnel got with it.</p>`;
+    return `<p class="small" style="padding:0 12px">Watches you found by hand, and what the funnel did with each. Caught ${m.caught} of ${m.total} worth bidding on.</p>` +
+      m.entries.slice().reverse().map(e => `<div class="lead miss ${e.caught ? "ok" : "no"}"><span></span><div><div>${esc(e.title || e.id)}</div>
+        <div class="why"><span class="stage">${e.caught ? "Caught" : "Missed"}: ${esc(e.stage)}</span>, ${esc(e.why)}${e.notes ? `. ${esc(e.notes)}` : ""}</div></div>
+        <div class="small">${esc(e.date || "")}</div></div>`).join("");
+  }
+  const list = kind === "waiting" ? (F.waiting || []) : (F.rejected || []);
+  const intro = kind === "waiting"
+    ? "Passed your rules but not AI-checked yet. The best fits ending soonest get checked first on the next scan."
+    : "Filtered out before any AI check, with the reason. If you see one that should have passed, tell me and the rule gets fixed.";
+  if (!list.length) return `<p class="empty">Nothing here right now.</p>`;
+  return `<p class="small" style="padding:0 12px">${intro}</p>` + list.map(l => `<a class="lead" href="${esc(l.url)}" target="_blank" rel="noopener">
+    ${l.image ? `<img src="${esc(l.image)}" alt="" loading="lazy">` : `<img alt="">`}
+    <div><div>${esc(l.title)}</div><div class="why">${kind === "waiting" ? `fit ${l.fit}: ` : ""}${esc((l.reasons || []).join("; "))}</div></div>
+    <div class="num">${money(l.price)}<div class="small">${l.bids != null ? l.bids + " bids" : ""}${l.hours_left != null ? " · " + fmtLeft(l.hours_left) : ""}</div></div></a>`).join("");
+}
 function render(){
   SEEN = getSet(SEEN_KEY); BIDS = getSet(BID_KEY);
   const hid = LOCAL ? new Set() : hidden();
@@ -383,6 +442,14 @@ function render(){
   // Bidding shows your watches whether live or ended, so you can see how each one finished.
   let rows = filter === "bidding" ? data.rows.filter(r => BIDS.has(r.key))
     : data.rows.filter(r => !hid.has(r.key) && (filter === "ended" ? r.status === "ended" : r.status === "active"));
+  const F = data.funnel || {};
+  $("#cntHot").textContent = F.hot ? ` ${F.hot}` : "";
+  $("#cntWait").textContent = (F.waiting || []).length ? ` ${(F.waiting || []).length}` : "";
+  $("#cntRej").textContent = (F.rejected || []).length ? ` ${(F.rejected || []).length}` : "";
+  funnelBar();
+  if (filter === "waiting" || filter === "rejected" || filter === "misses") { $("#rows").innerHTML = leadList(filter); $(".head").style.display = "none"; return; }
+  $(".head").style.display = "";
+  if (filter === "hot") rows = rows.filter(r => r.hot);
   if (filter === "new") rows = rows.filter(r => !SEEN.has(r.key));
   if (filter === "soon") rows = rows.filter(r => { const h = hoursLeft(r); return h != null && h < 24; });
   if (filter === "clears") rows = rows.filter(r => r.econ.max_bid != null && r.price <= r.econ.max_bid);
@@ -392,11 +459,14 @@ function render(){
   rows.sort(sort === "ending"
     ? (a,b) => (hoursLeft(a) ?? 1e9) - (hoursLeft(b) ?? 1e9)
     : (a,b) => (b.econ.margin_pct ?? -1e9) - (a.econ.margin_pct ?? -1e9));
-  $("#rows").innerHTML = rows.length ? rows.map(row).join("") :
+  if (filter === "hot") rows.sort((a,b) => ((F.action||[]).includes(b.key) - (F.action||[]).includes(a.key)) || ((hoursLeft(a) ?? 1e9) - (hoursLeft(b) ?? 1e9)));
+  const full = filter === "hot" && F.slots === 0 ? `<p class="empty"><b>You're holding ${F.holding} of ${F.max_holding}.</b> Sell one before buying. These are shown so you can see what you'd be passing on.</p>` : "";
+  $("#rows").innerHTML = full + (rows.length ? rows.map(row).join("") :
+    filter === "hot" ? `<p class="empty">Nothing hot right now: no priced watch is under its max bid and ending in the next day or so. Check <b>Waiting</b> for qualified listings the AI hasn't checked yet, or <b>Rejected</b> to see what was filtered out and why.</p>` :
     filter === "bidding" ? `<p class="empty">No watches marked yet. Tap the ☆ next to a watch you've bid on and it shows up here, including after the auction ends.</p>` :
     filter === "new" ? `<p class="empty">You're caught up. Watches you haven't opened yet show up here with a NEW tag.</p>` :
     data.rows.length ? `<p class="empty">Nothing matches this filter.</p>` :
-    `<p class="empty">The board fills from your daily runs. Run <code>python main.py</code>, then reload. Every AI-checked watch lands here.</p>`;
+    `<p class="empty">The board fills from your daily runs. Run <code>python main.py</code>, then reload. Every AI-checked watch lands here.</p>`);
   data.rows.forEach(r => prevPrice[r.key] = r.price);
 }
 function status(){
@@ -418,7 +488,7 @@ document.addEventListener("click", async ev => {
   const b = ev.target.closest("[data-bid]");
   if (b){ ev.preventDefault(); ev.stopPropagation(); toggleBid(b.dataset.bid); render(); return; }
   const f = ev.target.closest("[data-f]"), s = ev.target.closest("[data-s]"), d = ev.target.closest("[data-dismiss]");
-  if (f){ filter = f.dataset.f; document.querySelectorAll("[data-f]").forEach(b => b.setAttribute("aria-pressed", b === f)); render(); }
+  if (f){ ev.preventDefault(); filter = f.dataset.f; document.querySelectorAll(".controls [data-f]").forEach(b => b.setAttribute("aria-pressed", b.dataset.f === filter)); render(); }
   if (s){ sort = s.dataset.s; document.querySelectorAll("[data-s]").forEach(b => b.setAttribute("aria-pressed", b === s)); render(); }
   if (d){ if (LOCAL){ await fetch("/api/dismiss",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:d.dataset.dismiss})}); load(); } else { hide(d.dataset.dismiss); render(); } }
 });

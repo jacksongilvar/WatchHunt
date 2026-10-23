@@ -25,6 +25,8 @@ class Store:
         CREATE TABLE IF NOT EXISTS prices (
             key TEXT, ts TEXT, price REAL, bids INTEGER);
         CREATE INDEX IF NOT EXISTS prices_key ON prices(key);
+        CREATE TABLE IF NOT EXISTS leads (
+            key TEXT PRIMARY KEY, data TEXT, stage TEXT, lane TEXT, fit INTEGER, reasons TEXT, updated TEXT);
         CREATE TABLE IF NOT EXISTS closes (
             key TEXT PRIMARY KEY, source TEXT, title TEXT, price REAL, bids INTEGER, ended TEXT, seen_at TEXT);
         """)
@@ -88,6 +90,29 @@ class Store:
 
     def all_closes(self):
         return self.db.execute("SELECT key, source, title, price, bids, ended FROM closes").fetchall()
+
+    # --- leads (every listing a scan returns, with its funnel stage) ---
+    def save_lead(self, lst: Listing, verdict):
+        with _lock:
+            self.db.execute("INSERT OR REPLACE INTO leads VALUES (?,?,?,?,?,?,?)",
+                            (lst.key, json.dumps(asdict(lst)), verdict["stage"], verdict.get("lane"),
+                             verdict.get("fit", 0), json.dumps(verdict.get("reasons", [])), _now()))
+
+    def leads(self, stages=None):
+        q = "SELECT data, stage, lane, fit, reasons, updated FROM leads"
+        args = ()
+        if stages:
+            q += f" WHERE stage IN ({','.join('?' * len(stages))})"
+            args = tuple(stages)
+        out = []
+        for data, stage, lane, fit, reasons, updated in self.db.execute(q, args).fetchall():
+            out.append((Listing(**json.loads(data)), {"stage": stage, "lane": lane, "fit": fit,
+                                                      "reasons": json.loads(reasons or "[]"), "updated": updated}))
+        return out
+
+    def prune_leads(self, days=10):
+        with _lock:
+            self.db.execute("DELETE FROM leads WHERE updated < datetime('now', ?)", (f"-{days} days",))
 
     def commit(self):
         with _lock:

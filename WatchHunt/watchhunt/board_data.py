@@ -7,6 +7,7 @@ import os
 
 from closes import Closes, Retail, competition, retail_rows
 from economics import channel, numbers
+from funnel import hot, miss_report, read_miss_log
 
 
 def _ended_by_clock(lst):
@@ -154,11 +155,52 @@ def build_board(store, cfg):
             "your_max": (lst.manual or {}).get("max_bid"),
             "questions": ai.get("questions_for_seller", []) if ai else [],
             "history": store.history(lst.key),
+            "hours_left": hours,
         })
+        rows[-1]["hot"] = hot(rows[-1], cfg)
+    fun = funnel_summary(store, cfg, rows, now)
     return {
         "rows": rows,
+        "funnel": fun,
         "assumptions": {"target_margin_pct": econ.get("target_margin_pct"), "ship_in": econ.get("ship_in"),
                         "channel": channel(econ)[0], "sell_fee_pct": round(channel(econ)[1] * 100),
                         "ship_out": channel(econ)[2]},
         "refresh_minutes": cfg.get("dashboard", {}).get("refresh_minutes", 10),
     }
+
+
+def funnel_summary(store, cfg, rows, now):
+    """Counts for each funnel stage, the rejected and waiting lists with reasons, and the miss log."""
+    from heuristics import _hours_left
+    board = {r["key"]: r for r in rows}
+    live_leads, leads_by_key = [], {}
+    for lst, v in store.leads():
+        leads_by_key[lst.key] = v
+        h = _hours_left(lst)
+        if h is not None and h < 0:
+            continue
+        live_leads.append((lst, v, h))
+    qualified = [t for t in live_leads if t[1]["stage"] == "qualified"]
+    rejected = [t for t in live_leads if t[1]["stage"] == "rejected"]
+    waiting = [t for t in qualified if t[0].key not in board]
+    priced = [r for r in rows if r["status"] == "active" and (r["econ"] or {}).get("value")]
+    hot_rows = sorted([r for r in rows if r.get("hot")], key=lambda r: r["hours_left"] if r["hours_left"] is not None else 1e9)
+    cap = cfg.get("capacity") or {}
+    slots = max(0, cap.get("max_holding", 4) - cap.get("holding", 0))
+    action = [r["key"] for r in sorted(hot_rows, key=lambda r: -((r["econ"] or {}).get("margin_pct") or 0))[:slots]]
+
+    def brief(t):
+        lst, v, h = t
+        return {"key": lst.key, "title": lst.title, "url": lst.url, "price": lst.price, "bids": lst.bids,
+                "hours_left": round(h, 1) if h is not None else None, "reasons": v["reasons"][:3], "fit": v["fit"],
+                "image": lst.image_urls[0] if lst.image_urls else None}
+    rej_sorted = sorted(rejected, key=lambda t: (t[2] if t[2] is not None else 1e9))[:250]
+    wait_sorted = sorted(waiting, key=lambda t: (-(t[1]["fit"] or 0), t[2] if t[2] is not None else 1e9))[:120]
+    zones = {r["key"]: (r["econ"] or {}).get("zone") for r in rows}
+    misses = miss_report(read_miss_log(), leads_by_key, set(board), zones)
+    f = cfg.get("funnel") or {}
+    testing = misses["total"] < f.get("trust_min_entries", 10) or misses["caught"] / max(misses["total"], 1) < f.get("trust_catch_rate", 0.9)
+    return {"leads": len(live_leads), "qualified": len(qualified), "priced": len(priced), "hot": len(hot_rows),
+            "slots": slots, "holding": cap.get("holding", 0), "max_holding": cap.get("max_holding", 4),
+            "action": action, "rejected": [brief(t) for t in rej_sorted], "waiting": [brief(t) for t in wait_sorted],
+            "misses": misses, "testing": testing}
