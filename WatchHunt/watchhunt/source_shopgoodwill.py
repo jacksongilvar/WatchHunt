@@ -174,7 +174,8 @@ class ShopGoodwillSource:
             j = self._post(_body(query, page_size=40, closed=True))
         except (requests.RequestException, ValueError):
             return None
-        prices = [float(it.get("currentPrice") or 0) for it in _find_items(j)]
+        # Auctions that ended with 0 bids did not sell: their price is only the starting price.
+        prices = [float(it.get("currentPrice") or 0) for it in _find_items(j) if (it.get("numBids") or 0) > 0]
         prices = [p for p in prices if p > 0]
         if not prices:
             return {"query": query, "count": 0}

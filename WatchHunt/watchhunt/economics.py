@@ -42,7 +42,8 @@ def value_band(lst, econ, closes=None, retail=None):
     c = {} if ai.get("is_lot") else (lst.comps or {})
     if c.get("count", 0) >= econ.get("min_comps", 5) and c.get("p25") is not None:
         return {"low": c["p25"], "mid": c["median"], "high": c["p75"], "basis": "sold",
-                "basis_note": f'{c["count"]} ShopGoodwill sales, 90 days'}
+                "basis_note": f'{c["count"]} ShopGoodwill sales, 90 days, for the broad search "{c.get("query", "")}" '
+                              f'(mixed models, so a rough guide)'}
     m = {} if ai.get("is_lot") else (lst.market or {})
     lens_cfg = econ.get("lens", {})
     rng = ai.get("rough_value_range_usd")
