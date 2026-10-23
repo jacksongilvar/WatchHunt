@@ -68,6 +68,9 @@ def size_verdict(lst):
         reasons.append("AI check: women's size" + (f" ({ai.get('size_evidence')})" if ai.get("size_evidence") else ""))
     if case_mm and case_mm < 32:
         weak.append(f"AI estimates case about {case_mm:g}mm")
+    if case_mm and case_mm >= 34 and wearer in ("mens", "unisex"):
+        # The AI measured a men's-size case from the photos, so a small "mm" in the text is a band or lug width.
+        weak = [w for w in weak if not w.startswith("Case ")]
     reasons += strong + weak
     if wearer == "ladies" or strong:
         flag = "ladies"

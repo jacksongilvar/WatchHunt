@@ -128,6 +128,12 @@ def estimate(lst, svc_cfg, brands=None):
         jobs, basis = list(man["jobs"]), "your watchlist entry"
     elif isinstance(ai.get("service_needs"), list) and not ai.get("check_failed"):
         jobs, basis = [j for j in ai["service_needs"] if j in known], "AI check of the photos"
+        # "Untested, the cell is likely dead" is a guess, not a finding. Most Eco-Drives that sat in a drawer revive
+        # after a day in the sun, so a solar cell is only charged when the listing or the AI saw it actually failing.
+        if "solar_cell" in jobs:
+            seen_text = " ".join([lst.description or "", ai.get("condition_notes") or "", ". ".join(ai.get("visible_red_flags") or [])])
+            if not K["solar_weak"].search(seen_text):
+                jobs.remove("solar_cell")
         # A quartz watch from a thrift or estate seller needs a battery even when the AI forgets to say so.
         if wtype in ("quartz", "chrono_quartz", "perpetual") and "battery" not in jobs and "quartz_movement" not in jobs:
             jobs.insert(0, "battery")
