@@ -28,7 +28,7 @@ from zoneinfo import ZoneInfo
 
 import yaml
 
-from closes import PriceIndex, comp_key, describe, retail_rows, sold_rows, when
+from closes import PriceIndex, describe, retail_rows, sold_rows
 from heuristics import REF_NUMBER, detect_brand, normalize
 from store import Store
 
