@@ -34,7 +34,8 @@ def calibre(text):
 
 LOT = re.compile(r"\blot\b|\bpcs\b|\bpieces\b|assorted|\bbundle\b|\bwatches\b|\d+\s*(lbs?|pounds?)\b|\d+(\.\d+)?\s*g\b(?=.*lot)", re.I)
 BROKEN = re.compile(r"for (parts|repair)|parts or repair|not working|non[- ]?working|broken|as[- ]is for parts|\brepair\b", re.I)
-GOLD = re.compile(r"gold[- ]?(tone|plated|filled|cap|capped)|two[- ]?tone|\bsgp\b|\bgp\b|electroplat", re.I)
+GOLD = re.compile(r"gold[- ]?(tone|plated|filled|cap|capped)|two[- ]?tone|\bsgp\b|\bgp\b|\bgf\b|\bg\.?\s?filled|"
+                  r"rolled gold|electroplat", re.I)
 NOT_WATCH = re.compile(r"\bbox only|empty box|catalog|book|\bband only|strap only|links only|\bpouch\b", re.I)
 MOVE = [("eco-drive", re.compile(r"eco[- ]?drive|solar", re.I)), ("kinetic", re.compile(r"kinetic", re.I)),
         ("automatic", re.compile(r"automatic|self[- ]?winding|\bauto\b", re.I)), ("quartz", re.compile(r"quartz", re.I)),
@@ -113,8 +114,10 @@ def family(brand, text, families):
     norm = normalize(text)
     for entry in (families or {}).get(brand) or []:
         name, words = (entry[0], entry[1]) if isinstance(entry, list) else (entry, [entry])
-        if any(_contains(norm, str(w)) for w in words):
-            return name
+        for w in map(str, words):
+            # "skx*" matches any word starting with skx (SKX007, SKX009); plain words match whole words only.
+            if (w.endswith("*") and re.search(rf"\b{re.escape(w[:-1].lower())}", norm)) or _contains(norm, w):
+                return name
     return None
 
 
