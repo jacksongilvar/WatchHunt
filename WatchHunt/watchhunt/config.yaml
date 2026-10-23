@@ -276,7 +276,8 @@ families:
     - [ray, [ray]]
     - [kamasu, [kamasu]]
   gucci:
-    - [gucci 3000, [3000m, 3000l, 3000 m]]
+    - [gucci 3000 sherry, [sherry, web stripe, web dial, green red, red green]]
+    - [gucci 3000, [3000m, 3000l, 3000 m, 3000 2 l, 3000 2 m]]
     - [gucci 1500, [1500l, 1500 l]]
     - [gucci 9000, [9000m, 9000l]]
     - [gucci g-timeless, [g timeless, timeless]]
