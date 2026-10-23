@@ -93,11 +93,12 @@ class Closes:
         self.brands = brands or {}
         self.exact, self.group = {}, {}
         rows = []
+        # An auction that ended with 0 bids did not sell: its "price" is the starting price, not a sale.
         for lst in ended_listings:
-            if lst.price and lst.price >= min_price and lst.buying_format != "buy_now":
+            if lst.price and lst.price >= min_price and lst.buying_format != "buy_now" and (lst.bids or 0) > 0:
                 rows.append((lst.key, lst.title, float(lst.price), describe(lst.title, brands, lst.ai, lst.description)))
-        for key, _src, title, price, _bids, _ended in harvested:
-            if price and price >= min_price:
+        for key, _src, title, price, bids, _ended in harvested:
+            if price and price >= min_price and (bids or 0) > 0:
                 rows.append((key, title, float(price), describe(title, brands)))
         seen = set()
         for key, title, price, d in rows:
