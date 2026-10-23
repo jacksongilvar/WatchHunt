@@ -114,8 +114,11 @@ def build_board(store, cfg):
     retail = Retail(retail_rows(cfg.get("pricing"), cfg["brands"], cfg.get("families")), index.index, cfg.get("pricing"))
     calib = None
     if os.path.exists("calibration.json"):  # written by backtest.py
-        with open("calibration.json") as f:
-            calib = json.load(f)
+        try:
+            with open("calibration.json") as f:
+                calib = json.load(f)
+        except (OSError, ValueError):
+            print("! calibration.json is empty or unreadable; building the board without calibration.")
     now = datetime.now(timezone.utc)
     for lst, status, updated in tracked:
         ai = lst.ai or {}

@@ -47,7 +47,8 @@ jobs:
         run: |
           if git fetch --depth 1 origin state 2>/dev/null; then
             { git show FETCH_HEAD:watchhunt.db > watchhunt.db 2>/dev/null || git show FETCH_HEAD:watchhunter.db > watchhunt.db; } && echo "State restored."
-            git show FETCH_HEAD:calibration.json > calibration.json 2>/dev/null || true
+            # Write to a temp file first: a failed `git show` would otherwise leave an empty calibration.json.
+            git show FETCH_HEAD:calibration.json > calibration.tmp 2>/dev/null && mv calibration.tmp calibration.json || rm -f calibration.tmp
           else
             echo "No saved state yet (first run)."
           fi
