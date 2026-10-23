@@ -75,6 +75,17 @@ main{max-width:var(--wrap);margin:0 auto;padding:0 20px 60px}
 .concern{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
 
 /* The gauge: brass band = value range, needle = your all-in cost */
+.meter{position:relative;height:46px;padding-top:14px}
+.meter .zones{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--oxblood)}
+.meter .zg{background:var(--lume)} .meter .za{background:var(--brass)} .meter .zr{flex:1;background:var(--oxblood)}
+.meter .now{position:absolute;top:8px;width:3px;height:22px;margin-left:-1.5px;background:var(--steel);border-radius:2px}
+.meter .now span{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font:600 12px/1 var(--figures);color:var(--steel);white-space:nowrap}
+.meter .close-mark{position:absolute;top:17px;width:9px;height:9px;margin-left:-4.5px;transform:rotate(45deg);border:2px solid var(--steel);background:var(--dial)}
+.meter .meter-cap{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:11.5px;color:var(--muted);white-space:nowrap}
+.meter .none{font-size:12px;color:var(--muted)}
+.verdict{display:inline-block;margin-top:2px;padding:1px 8px;border-radius:999px;font:700 11px/1.6 var(--text);letter-spacing:.02em}
+.verdict.green{background:var(--lume);color:#0b1220} .verdict.amber{background:var(--brass);color:#0b1220} .verdict.red{background:var(--oxblood);color:#fff}
+.tally b.g{color:var(--lume)} .tally b.a{color:var(--brass)} .tally b.r{color:var(--oxblood)}
 .gauge{position:relative;height:34px}
 .gauge .track{position:absolute;left:0;right:0;top:16px;height:2px;background:var(--rule)}
 .gauge .ticks{position:absolute;left:0;right:0;top:11px;height:12px;
@@ -200,7 +211,7 @@ main{max-width:var(--wrap);margin:0 auto;padding:0 20px 60px}
 <main>
   <div class="head" aria-hidden="true">
     <div>Watch</div><div class="num">Price</div><div class="num">Ends</div><div class="num">Value</div>
-    <div>Cost vs value</div><div class="num">Profit</div><div class="num">Max bid</div>
+    <div>Price vs your limits</div><div class="num">Profit</div><div class="num">Max bid</div>
   </div>
   <div id="rows"></div>
 </main>
@@ -232,16 +243,24 @@ function fmtLeft(h){
   const d = Math.floor(h/24), hh = Math.floor(h%24), m = Math.floor((h*60)%60);
   return d ? `${d}d ${hh}h` : hh ? `${hh}h ${m}m` : `${m}m`;
 }
+// The price meter: one scale of bid prices. Green = at or under your max bid, amber = profitable but under your
+// target margin, red = loses money. The dark needle is the current price; the hollow marker is where auctions
+// like this one usually end.
+const ZONE = {green: ["var(--lume)", "Buy zone"], amber: ["var(--brass)", "Thin"], red: ["var(--oxblood)", "Loses money"]};
 function gauge(r){
   const e = r.econ, v = e.value;
-  if (!v) return `<div class="gauge"><span class="none">No value estimate yet</span></div>`;
-  const max = Math.max(v.high, e.all_in) * 1.12, pct = x => (100 * x / max).toFixed(2) + "%";
-  const color = e.max_bid != null && r.price <= e.max_bid ? "var(--lume)" : e.net_low > 0 ? "var(--brass)" : "var(--oxblood)";
-  return `<div class="gauge" title="Brass band: value ${money(v.low)} to ${money(v.high)} (${esc(v.basis_note)}). Needle: your all-in cost ${money(e.all_in)}. Green clears your target margin, brass is profitable but thin, red loses money at the low estimate.">
-    <div class="ticks"></div><div class="track"></div>
-    <div class="band ${v.basis}" style="left:${pct(v.low)};width:calc(${pct(v.high)} - ${pct(v.low)})"></div>
-    <div class="mid" style="left:${pct(v.mid)}"></div>
-    <div class="needle" style="left:${pct(e.all_in)};background:${color}"></div></div>`;
+  if (!v || e.breakeven_bid == null) return `<div class="meter"><span class="none">No value estimate yet</span></div>`;
+  const mb = Math.max(e.max_bid || 0, 0), be = Math.max(e.breakeven_bid, mb), ec = e.expected_close;
+  const top = Math.max(be * 1.5, r.price * 1.15, (ec || 0) * 1.15, 20);
+  const pct = x => Math.min(100, Math.max(0, 100 * x / top)).toFixed(2) + "%";
+  const z = ZONE[e.zone] || ZONE.red;
+  const tip = `Green up to ${money(mb)} (your max bid). Amber up to ${money(be)} (break-even). Red above that. Now ${money(r.price)}${ec != null ? `; similar auctions usually end around ${money(ec)}` : ""}.`;
+  return `<div class="meter" title="${esc(tip)}">
+    <div class="zones"><span class="zg" style="width:${pct(mb)}"></span><span class="za" style="width:calc(${pct(be)} - ${pct(mb)})"></span><span class="zr"></span></div>
+    ${ec != null ? `<div class="close-mark" style="left:${pct(ec)}" title="Usually ends around ${money(ec)}"></div>` : ""}
+    <div class="now" style="left:${pct(r.price)}"><span>${money(r.price)}</span></div>
+    <div class="meter-cap"><span style="color:${z[0]}">● ${z[1]}</span>${ec != null ? `<span>◇ usually ends ${money(ec)}</span>` : ""}</div>
+  </div>`;
 }
 const BASIS = {sold: "sold data", closes: "real closes", market: "Lens market", ai: "AI guess", manual: "your estimate"};
 function marketHtml(r){
@@ -330,7 +349,7 @@ function row(r){
     <div class="c-value num"><div class="fig">${v ? money(v.mid) : "–"}</div><div class="small">${v ? BASIS[v.basis] || v.basis : ""}</div>${genuineTag(r)}</div>
     <div class="c-gauge">${gauge(r)}</div>
     <div class="c-net num" title="Likely: profit if it sells mid-range, after fees, shipping and repairs. Worst case: profit if it sells at the low end."><div class="small ml">Profit</div><div class="fig ${netCls}">${e.net_mid == null ? "–" : money(e.net_mid)}</div><div class="small">${e.net_mid == null ? "" : "likely"}</div>${e.net_low != null ? `<div class="small ${e.net_low >= 0 ? "pos" : "neg"}">worst ${money(e.net_low)}</div>` : ""}</div>
-    <div class="c-max num"><div class="small ml">Max bid</div><div class="fig ${under ? "pos" : ""}">${e.max_bid === 0 ? "Pass" : money(e.max_bid)}</div><div class="small">${e.max_bid === 0 ? "too thin" : under ? "price is under" : e.max_bid != null ? "price is over" : ""}</div>${r.your_max != null ? `<div class="small">yours ${money(r.your_max)}</div>` : ""}</div>
+    <div class="c-max num"><div class="small ml">Max bid</div><div class="fig ${under ? "pos" : ""}">${e.max_bid === 0 ? "Pass" : money(e.max_bid)}</div>${e.zone ? `<div><span class="verdict ${e.zone}">${e.zone === "green" ? "BUY" : e.zone === "amber" ? "THIN" : "PASS"}</span></div>` : ""}${r.your_max != null ? `<div class="small">yours ${money(r.your_max)}</div>` : ""}</div>
   </summary>
   <div class="detail">
     <div><b>${esc(r.title)}</b><div>${esc(r.summary)}</div></div>
@@ -380,11 +399,12 @@ function render(){
 function status(){
   const s = data.state || {}, when = s.last_refresh ? Math.round((Date.now() - Date.parse(s.last_refresh))/60000) : null;
   const live = data.rows.filter(r => r.status === "active").length;
-  $("#status").innerHTML = `<b>${live}</b> watches live. ` +
+  const act = data.rows.filter(r => r.status === "active"), cnt = z => act.filter(r => r.econ.zone === z).length;
+  $("#status").innerHTML = `<b>${live}</b> watches live: <span class="tally"><b class="g">${cnt("green")}</b> in the green, <b class="a">${cnt("amber")}</b> thin, <b class="r">${cnt("red")}</b> in the red.</span> ` +
     (s.refreshing ? "Checking bids now." : when == null ? "Bids not checked yet." :
       data.mode === "static" ? `Updated <b>${when} min</b> ago. Refreshes about hourly.` : `Bids checked <b>${when} min</b> ago, every ${data.refresh_minutes} min.`);
   const a = data.assumptions || {};
-  $("#assume").textContent = `Assumes you sell ${a.channel === "local" ? "locally" : "on " + a.channel} (${a.sell_fee_pct}% fees, $${a.ship_out} shipping out), $${a.ship_in} shipping in and a ${a.target_margin_pct}% target margin. Change these in config.yaml. "Real closes" values come from auctions WatchHunt watched end. Solid bands are sold data, dotted bands are discounted Google Lens asking prices, dashed bands are AI guesses. The needle is your all-in cost: green clears your target, brass is thin, red loses money at the low estimate.`;
+  $("#assume").textContent = `Assumes you sell ${a.channel === "local" ? "locally" : "on " + a.channel} (${a.sell_fee_pct}% fees, $${a.ship_out} shipping out), $${a.ship_in} shipping in and a ${a.target_margin_pct}% target margin. Change these in config.yaml. "Real closes" values come from auctions WatchHunt watched end. The bar under each watch is a scale of bid prices: green is up to your max bid (clears your target margin even if it sells at the low value), amber is still profitable at the middle value but thin, red loses money. The white needle is the current price. The hollow diamond is where similar auctions usually end, so a needle in the green with the diamond in the red means the price will probably climb out of your range.`;
   $("#err").hidden = !s.last_error; $("#err").textContent = s.last_error ? "Last bid check failed: " + s.last_error : "";
 }
 async function load(){

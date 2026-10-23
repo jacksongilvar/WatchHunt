@@ -209,4 +209,20 @@ def numbers(lst, econ, brands=None, closes=None):
     revenue_low = band["low"] * (1 - fee) - ship_out
     max_bid = (revenue_low / (1 + target) - fixed) / (1 + prem)
     out["max_bid"] = round(max(max_bid, 0), 2)
+    # Break-even bid: the price at which a sale at the middle of the value range just covers every cost.
+    revenue_mid = band["mid"] * (1 - fee) - ship_out
+    out["breakeven_bid"] = round(max((revenue_mid - fixed) / (1 + prem), 0), 2)
+    out["zone"] = zone(lst.price, out["max_bid"], out["breakeven_bid"])
+    if out.get("expected_close") is not None:
+        out["close_zone"] = zone(out["expected_close"], out["max_bid"], out["breakeven_bid"])
     return out
+
+
+def zone(price, max_bid, breakeven):
+    """green: at or under your max bid (clears the target margin even at the low value).
+    amber: over the max bid but still profitable at the middle value. red: loses money at the middle value."""
+    if price is None or max_bid is None or breakeven is None:
+        return None
+    if max_bid > 0 and price <= max_bid:
+        return "green"
+    return "amber" if price <= breakeven else "red"
