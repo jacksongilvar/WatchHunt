@@ -420,6 +420,7 @@ competition:
   min_signals: 2           # other signals needed together (misspelled, vague title, untested quartz, daytime close)
 
 watchlist:
+  - {id: 281466877, max_bid: 25, shipping: 13, wearer: ladies, note: "Gucci women's round gold-tone, black Roman dial, CoA. Check caseback model (3400L?) before bidding"}
   - {id: 281601108, shipping: 15, note: "Seiko automatic day-date, listed working. Audit pick, AI to check"}
   - {id: 281560998, shipping: 15, note: "Seiko 7009-8019 automatic. Audit pick, check bracelet size"}
   - {id: 281393247, shipping: 15, note: "Seiko Recraft automatic (7S26 family). Audit pick"}
