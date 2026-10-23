@@ -102,11 +102,12 @@ def build_board(store, cfg):
     econ = cfg["economics"]
     rows = []
     tracked = store.tracked(("active", "ended"))
-    index = Closes([l for l, st, _ in tracked if st == "ended"], cfg["brands"], store.all_closes())
+    index = Closes([l for l, st, _ in tracked if st == "ended"], cfg["brands"], store.all_closes(),
+                   families=cfg.get("families"), pricing=cfg.get("pricing"))
     now = datetime.now(timezone.utc)
     for lst, status, updated in tracked:
         ai = lst.ai or {}
-        cl = index.lookup(lst, cfg["brands"], econ.get("min_closes", 3))
+        cl = index.lookup(lst)
         e = numbers(lst, econ, cfg["brands"], cl)
         hours = None
         if lst.end_time:

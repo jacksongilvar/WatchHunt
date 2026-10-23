@@ -209,6 +209,93 @@ brands:
   bulova:           {tier: 1, also: [accutron], misspellings: [bulvoa, bolova]}
   gruen:            {tier: 1, also: [], misspellings: []}
 
+# Model families for price matching (closes.py comp_key). First match wins, so list specific names first.
+# Each line: [family name, [words that mean it]]. Add a line when you see comps mixing models that sell differently.
+families:
+  seiko:
+    - [king seiko, [king seiko, kingseiko]]
+    - [lord matic, [lord matic, lordmatic, lord marvel]]
+    - [bell-matic, [bell matic, bellmatic]]
+    - [sportsmatic, [sportsmatic]]
+    - [seiko 5 sports, [5 sports, 5 sport, srpd, srpe, srpk]]
+    - [actus, [actus]]
+    - [skx, [skx]]
+    - [prospex diver, [prospex, turtle, samurai, monster, sumo, srp777, 6309 7040, 6309-7040, 7002, 7548, 6105, 6306]]
+    - [presage, [presage, cocktail time]]
+    - [coutura, [coutura]]
+    - [sportura, [sportura]]
+    - [velatura, [velatura]]
+    - [arctura, [arctura]]
+    - [premier, [premier]]
+    - [astron, [astron]]
+    - [flightmaster, [flightmaster]]
+    - [recraft, [recraft]]
+    - [hi-beat, [hi beat, hibeat]]
+    - [kinetic, [kinetic]]
+    - [quartz perpetual, [8f32, 8f33, 8f35, 8f56, 4f32, 4f56]]
+    - [seiko 5, [seiko 5, snk, snx, snzf, 7s26, 7s36, 6309, 7009]]
+    - [diver, [diver, divers, 200m, 150m]]
+  citizen:
+    - [promaster, [promaster]]
+    - [nighthawk, [nighthawk]]
+    - [skyhawk, [skyhawk]]
+    - [blue angels, [blue angels]]
+    - [chronomaster, [chronomaster]]
+    - [bullhead, [bullhead]]
+    - [perpetual, [perpetual, e870, 8700]]
+    - [diver, [diver, divers, 200m]]
+  hamilton:
+    - [khaki, [khaki]]
+    - [jazzmaster, [jazzmaster]]
+    - [ventura, [ventura]]
+    - [electric, [electric]]
+    - [thin-o-matic, [thin o matic, thinomatic]]
+  bulova:
+    - [accutron, [accutron]]
+    - [precisionist, [precisionist]]
+    - [caravelle, [caravelle]]
+    - [marine star, [marine star]]
+  orient:
+    - [bambino, [bambino]]
+    - [mako, [mako]]
+    - [ray, [ray]]
+    - [kamasu, [kamasu]]
+  gucci:
+    - [gucci 3000, [3000m, 3000l, 3000 m]]
+    - [gucci 1500, [1500l, 1500 l]]
+    - [gucci 9000, [9000m, 9000l]]
+    - [gucci g-timeless, [g timeless, timeless]]
+
+# How comps are matched and weighted (closes.py PriceIndex). Defaults are starting points; backtest.py tells you
+# whether they work.
+pricing:
+  half_life_days: 90        # a comp this old counts half as much as one from today
+  max_age_days: 365         # older comps are ignored
+  # Most specific first. A level is used only when it has at least min comps; otherwise fall back to the next.
+  levels:
+    - {name: reference, fields: [brand, ref, wearer, material], min: 3}
+    - {name: calibre,   fields: [brand, cal, wearer, material], min: 3}
+    - {name: family,    fields: [brand, family, move, wearer, material], min: 4}
+    - {name: movement,  fields: [brand, move, wearer, material], min: 6}
+    - {name: brand,     fields: [brand, wearer], min: 8}
+  # Prices are moved between conditions with these factors (unknown = typical untested Goodwill listing).
+  # backtest.py prints the factors your own data implies; copy them here once there are enough comps.
+  condition_factor: {working: 1.2, unknown: 1.0, parts: 0.55}
+  boxed_factor: 1.1
+  # Grades: A and B can set a value on the board. C and D only show where auctions like it usually end.
+  grade_a: {levels: [reference, calibre], min_count: 5, max_spread: 0.6}
+  grade_b: {levels: [reference, calibre, family], min_count: 4}
+  grade_c: {levels: [movement]}
+  # Retail (what you can sell for) vs wholesale (where auctions end). Your profit is the gap.
+  # retail_csv: your own sales and hand-logged eBay (Terapeak) sold prices. See data/retail_comps.csv.
+  # retail_sheet_csv_url: optional. Your WatchHunter Google Sheet published as CSV (File > Share > Publish to web).
+  retail_csv: data/retail_comps.csv
+  retail_sheet_csv_url: ""
+  # When a watch has wholesale comps but no retail comps, retail = wholesale x this. 1.0 means "assume no spread",
+  # which is the honest default until your own sales prove otherwise. backtest.py prints the ratio your data shows.
+  retail_ratio_default: 1.0
+  min_ratio_pairs: 5        # models with both retail and wholesale comps needed before the measured ratio is used
+
 # Live board (python dashboard.py)
 dashboard:
   host: 127.0.0.1          # use 0.0.0.0 to open it from your phone on the same wifi

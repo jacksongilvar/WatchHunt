@@ -22,9 +22,9 @@ from sizing import size_verdict
 def value_band(lst, econ, closes=None):
     # Real closing prices for this brand and movement beat any estimate, including a hand-entered one.
     cl = closes or {}
-    if cl.get("level") == "exact" and cl.get("count", 0) >= econ.get("min_closes", 3) and cl.get("p25") is not None:
-        return {"low": cl["p25"], "mid": cl["median"], "high": cl["p75"], "basis": "closes",
-                "basis_note": f'{cl["count"]} WatchHunt-tracked auctions for {cl["match"]} (what buyers actually paid)'}
+    if cl.get("grade") in ("A", "B") and cl.get("p25") is not None:
+        return {"low": cl["p25"], "mid": cl["median"], "high": cl["p75"], "basis": "closes", "grade": cl["grade"],
+                "basis_note": f'Grade {cl["grade"]}: {cl["count"]} finished auctions for {cl["match"]} (what buyers actually paid)'}
     man = lst.manual or {}
     v = man.get("value")
     if isinstance(v, list) and len(v) == 2 and all(isinstance(x, (int, float)) for x in v) and max(v) > 0:
