@@ -106,6 +106,7 @@ main{max-width:var(--wrap);margin:0 auto;padding:0 20px 60px}
 .detail b{color:var(--steel);font-weight:500}
 .detail ul{margin:4px 0 0;padding-left:18px}
 .detail .actions{display:flex;flex-wrap:wrap;gap:8px;align-items:start}
+.vrange{white-space:nowrap}
 .assume summary{cursor:pointer;color:var(--steel);font-size:13px;list-style:none}
 .assume summary::-webkit-details-marker{display:none}
 .assume summary::before{content:"\24D8  "}
@@ -116,12 +117,14 @@ main{max-width:var(--wrap);margin:0 auto;padding:0 20px 60px}
 
 @media (max-width:900px){
   .head{display:none}
-  .row>summary{grid-template-columns:1fr auto;grid-template-areas:"w w" "p e" "g g" "n m";row-gap:8px}
+  .row>summary{grid-template-columns:1fr auto;grid-template-areas:"w w" "p e" "v v" "g g" "n m";row-gap:8px}
   .ml{display:block}
   .controls .seg{max-width:100%;overflow-x:auto}
   .c-watch{grid-area:w}.c-price{grid-area:p;text-align:left}.c-ends{grid-area:e;text-align:right}
   .c-gauge{grid-area:g}.c-net{grid-area:n;text-align:left}.c-max{grid-area:m}
-  .c-value{display:none}
+  .c-value{grid-area:v;text-align:left;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px}
+  .c-value .ml{display:inline}
+  .c-value{margin-bottom:6px}
   .detail{padding-left:12px}
   h1{font-size:36px}
 }
@@ -142,7 +145,7 @@ main{max-width:var(--wrap);margin:0 auto;padding:0 20px 60px}
   .seg button,.btn{padding:10px 14px;min-height:40px}
   .assume{padding:6px 16px 10px}
   main{padding:0 8px calc(60px + env(safe-area-inset-bottom))}
-  .row>summary{grid-template-columns:1fr 1fr 1fr;grid-template-areas:"w w w" "p e m" "g g g" "n n n";
+  .row>summary{grid-template-columns:1fr 1fr 1fr;grid-template-areas:"w w w" "p e m" "v v v" "g g g" "n n n";
                gap:6px 10px;padding:14px 8px;align-items:start}
   .c-gauge,.c-net{align-self:center}
   .c-price,.c-ends,.c-max{text-align:left}
@@ -346,7 +349,7 @@ function row(r){
       <div class="sub"><span class="concern" style="background:${cc}" title="${cl}"></span>${esc(r.source)}${r.reference ? " " + esc(r.reference) : ""}${r.era ? ", " + esc(r.era) : ""}</div></div></div>
     <div class="c-price num"><div class="fig${flashed}">${money(r.price)}</div><div class="small">${r.bids != null ? r.bids + " bids" : "buy now"}</div></div>
     <div class="c-ends num"><div class="fig" data-left="${esc(r.key)}">${r.status === "ended" ? "Ended" : fmtLeft(h)}</div></div>
-    <div class="c-value num"><div class="fig">${v ? money(v.mid) : "–"}</div><div class="small">${v ? BASIS[v.basis] || v.basis : ""}</div>${genuineTag(r)}</div>
+    <div class="c-value num"><div class="small ml">Worth</div><div class="fig vrange">${v ? `${money(v.low)}–${money(v.high)}` : "–"}</div><div class="small">${v ? `typ. ${money(v.mid)} · ${BASIS[v.basis] || v.basis}` : ""}</div>${genuineTag(r)}</div>
     <div class="c-gauge">${gauge(r)}</div>
     <div class="c-net num" title="Likely: profit if it sells mid-range, after fees, shipping and repairs. Worst case: profit if it sells at the low end."><div class="small ml">Profit</div><div class="fig ${netCls}">${e.net_mid == null ? "–" : money(e.net_mid)}</div><div class="small">${e.net_mid == null ? "" : "likely"}</div>${e.net_low != null ? `<div class="small ${e.net_low >= 0 ? "pos" : "neg"}">worst ${money(e.net_low)}</div>` : ""}</div>
     <div class="c-max num"><div class="small ml">Max bid</div><div class="fig ${under ? "pos" : ""}">${e.max_bid === 0 ? "Pass" : money(e.max_bid)}</div>${e.zone ? `<div><span class="verdict ${e.zone}">${e.zone === "green" ? "BUY" : e.zone === "amber" ? "THIN" : "PASS"}</span></div>` : ""}${r.your_max != null ? `<div class="small">yours ${money(r.your_max)}</div>` : ""}</div>
