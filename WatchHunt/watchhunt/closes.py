@@ -17,7 +17,7 @@ CAL = [
     re.compile(r"\bcal(?:ibre|iber)?\.?\s*([a-z]?\d{3,4}[a-z]?)\b", re.I),        # "Calibre 8700", "cal. 7S26"
     re.compile(r"\b([a-z]?\d[a-z0-9]\d{2})[-\s][a-z0-9]{3,4}\b", re.I),             # 6309-8019, 7S26-04V0, E870-S015294, 8F32-0069
     re.compile(r"\b(\d[a-z]\d{2}|[a-z]\d{3})\b", re.I),                              # bare 7S26, 8F32, E870, A904
-    re.compile(r"\b(s[a-z]{2,3}\d{3}[a-z]?)\d?\b", re.I),                                 # Seiko model codes: SNX997, SKX007, SNKD99
+    re.compile(r"\b(s[a-z]{2,3}\d{2,3})[a-z]?\d?\b", re.I),                               # Seiko model codes: SNX997, SKX007, SNKD99
 ]
 ALIASES = {"8700": "e870", "e870": "e870"}
 
