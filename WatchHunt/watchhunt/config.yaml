@@ -98,6 +98,7 @@ ebay:
 shopgoodwill:
   enabled: true
   page_size: 40
+  pages_per_query: 3         # up to 120 results per search. One page only reached auctions ending soonest
   queries:
     - seiko automatic
     - seiko diver
@@ -107,6 +108,10 @@ shopgoodwill:
     - seiko perpetual
     - seiko 8f
     - citizen perpetual
+    - seiko 6a32
+    - gucci watch
+    - gucci 3000
+    - gucci 1100
     - {q: rolex, max_price: 1500}
     - {q: cartier, max_price: 1500}
     - {q: tudor, max_price: 1500}

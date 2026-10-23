@@ -101,13 +101,22 @@ class ShopGoodwillSource:
     def fetch(self):
         lo, hi = self.search_cfg["min_price"], self.search_cfg["max_price"]
         seen = set()
+        size = self.cfg.get("page_size", 40)
         for q, q_hi in query_items(self.cfg["queries"], hi):
-            try:
-                j = self._post(_body(q, page_size=self.cfg.get("page_size", 40), lo=lo, hi=q_hi))
-            except (requests.RequestException, ValueError) as e:
-                print(f"  [shopgoodwill] query '{q}' failed: {e}")
-                continue
-            for it in _find_items(j):
+            items = []
+            # Results come ending-soonest first, so one page of 40 misses newer listings on busy searches.
+            for page in range(1, self.cfg.get("pages_per_query", 3) + 1):
+                try:
+                    j = self._post(_body(q, page=page, page_size=size, lo=lo, hi=q_hi))
+                except (requests.RequestException, ValueError) as e:
+                    print(f"  [shopgoodwill] query '{q}' page {page} failed: {e}")
+                    break
+                batch = _find_items(j)
+                items += batch
+                if len(batch) < size:
+                    break
+                time.sleep(self.search_cfg.get("polite_delay_seconds", 2))
+            for it in items:
                 iid = str(it.get("itemId"))
                 if iid in seen:
                     continue
