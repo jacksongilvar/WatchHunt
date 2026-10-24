@@ -443,7 +443,7 @@ funnel:
 # Your stock. Update holding when you buy or sell; the board turns "hot" into "action" only for open slots.
 capacity:
   max_holding: 4
-  holding: 3                 # perpetual calendar, tiger eye, Gucci 7900M
+  holding: 4                 # perpetual calendar, tiger eye, Gucci 7900M, Citizen Corso
 
 watchlist:
   - {id: 281003615, max_bid: 45, shipping: 13, note: "Gucci men's round gold-tone quartz, champagne Roman dial, blue hands, CoA. Check caseback model and plating wear"}
