@@ -1,0 +1,7 @@
+{
+  "checked_at": "2026-10-24T12:13:50+00:00",
+  "client_id_set": false,
+  "client_secret_set": false,
+  "result": "keys_missing",
+  "fix": "Add EBAY_CLIENT_ID and EBAY_CLIENT_SECRET under Settings > Secrets and variables > Actions."
+}
