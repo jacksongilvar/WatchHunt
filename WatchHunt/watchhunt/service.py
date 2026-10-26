@@ -120,6 +120,12 @@ def estimate(lst, svc_cfg, brands=None):
     wtype = watch_type(lst)
     if man.get("service") is not None and not man.get("jobs"):
         total = float(man["service"])
+        # A hand-entered service number is written before anyone has seen the photos closely. If the AI check
+        # found more work than that (crystal, strap, corrosion, not running), the larger figure wins.
+        ai_est = estimate(type(lst)(**{**lst.__dict__, "manual": None}), svc_cfg, brands) if lst.ai else None
+        if ai_est and ai_est["total"] > total:
+            ai_est["basis"] += f" (higher than your ${total:.0f} estimate, so this is used)"
+            return ai_est
         return {"total": total, "jobs": [{"job": "manual", "label": "Your estimate", "cost": total}] if total else [],
                 "basis": "your watchlist entry", "type": wtype, "tier": tier}
     known = set((svc_cfg.get("jobs") or {}).keys())
